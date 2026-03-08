@@ -1,0 +1,55 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id        String      @id @default(cuid())
+  email     String      @unique
+  name      String?
+  createdAt DateTime    @default(now())
+  checkIns  CheckIn[]
+  badges    UserBadge[]
+}
+
+model CheckIn {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+
+  weight Float
+  height Float
+  waist  Float?
+  hips   Float?
+  chest  Float?
+  arms   Float?
+  goal   String @default("definicion")
+
+  frontPhotoUrl  String?
+  sidePhotoUrl   String?
+  photoExpiresAt DateTime?
+
+  bodyScore Int?
+  rank      String?
+  analysis  String?
+  dietPlan  String?
+
+  @@index([userId])
+}
+
+model UserBadge {
+  id       String   @id @default(cuid())
+  userId   String
+  user     User     @relation(fields: [userId], references: [id])
+  badge    String
+  earnedAt DateTime @default(now())
+
+  @@unique([userId, badge])
+}
