@@ -4,6 +4,79 @@ export const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 })
 
+// ─── Cálculo científico de TDEE y macros ───────────────────────────────────
+
+function calcularTDEE(params: {
+  weight: number
+  height: number
+  age: number
+  sex: string
+  activityLevel: string
+}): number {
+  const { weight, height, age, sex, activityLevel } = params
+
+  // Mifflin-St Jeor (más precisa que Harris-Benedict)
+  const bmr = sex === 'mujer'
+    ? 10 * weight + 6.25 * height - 5 * age - 161
+    : 10 * weight + 6.25 * height - 5 * age + 5
+
+  const multipliers: Record<string, number> = {
+    sedentario: 1.2,
+    ligero:     1.375,
+    moderado:   1.55,
+    activo:     1.725,
+    atletico:   1.9,
+  }
+
+  return Math.round(bmr * (multipliers[activityLevel] || 1.55))
+}
+
+function calcularMacros(tdee: number, weight: number, goal: string): {
+  calories: number
+  protein: number
+  fat: number
+  carbs: number
+  deficit: number
+} {
+  // Ajuste calórico por objetivo
+  const goalMultiplier: Record<string, number> = {
+    perdida:      0.75,   // déficit 25%
+    definicion:   0.82,   // déficit 18%
+    mantenimiento: 1.0,
+    volumen:      1.12,   // superávit 12%
+  }
+
+  const calories = Math.round(tdee * (goalMultiplier[goal] || 0.82))
+
+  // Proteína (evidencia científica por objetivo, g/kg peso corporal)
+  const proteinPerKg: Record<string, number> = {
+    perdida:      2.4,
+    definicion:   2.2,
+    mantenimiento: 1.8,
+    volumen:      2.0,
+  }
+  const protein = Math.round(weight * (proteinPerKg[goal] || 2.2))
+
+  // Grasa: mínimo 0.8g/kg, máx 30% calorías
+  const fatMin = Math.round(weight * 0.8)
+  const fatMax = Math.round((calories * 0.28) / 9)
+  const fat = Math.max(fatMin, Math.min(fatMax, Math.round(weight * 1.0)))
+
+  // Carbohidratos: calorías restantes
+  const remainingCals = calories - (protein * 4) - (fat * 9)
+  const carbs = Math.max(0, Math.round(remainingCals / 4))
+
+  return {
+    calories,
+    protein,
+    fat,
+    carbs,
+    deficit: Math.round(tdee - calories),
+  }
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+
 export async function analyzBodyAndGenerateDiet(params: {
   weight: number
   height: number
@@ -35,134 +108,163 @@ export async function analyzBodyAndGenerateDiet(params: {
     dietNotes?: string | null
   } | null
 }) {
-  const { weight, height, waist, hips, chest, arms, goal, age, sex, activityLevel, previousCheckIn, frontPhotoBase64, sidePhotoBase64, frontPhotoMime, sidePhotoMime, preferences } = params
+  const {
+    weight, height, waist, hips, chest, arms, goal,
+    age, sex, activityLevel, previousCheckIn,
+    frontPhotoBase64, sidePhotoBase64, frontPhotoMime, sidePhotoMime,
+    preferences,
+  } = params
 
   const bmi = (weight / ((height / 100) ** 2)).toFixed(1)
+
+  // Pre-calcular TDEE y macros si tenemos los datos necesarios
+  const hasTDEEData = age && sex && activityLevel
+  const tdee = hasTDEEData
+    ? calcularTDEE({ weight, height, age: age!, sex: sex!, activityLevel: activityLevel! })
+    : null
+  const macros = tdee
+    ? calcularMacros(tdee, weight, goal)
+    : null
+
   const goalLabels: Record<string, string> = {
-    definicion: 'definición muscular (bajar grasa manteniendo músculo)',
-    volumen: 'ganar masa muscular',
-    mantenimiento: 'mantenimiento del peso actual',
-    perdida: 'pérdida de peso significativa',
+    definicion:    'definición muscular (reducir grasa conservando músculo)',
+    volumen:       'ganar masa muscular (superávit calórico controlado)',
+    mantenimiento: 'mantenimiento del peso y composición actual',
+    perdida:       'pérdida de peso significativa (déficit agresivo pero sostenible)',
   }
 
   const activityLabels: Record<string, string> = {
-    sedentario: 'Sedentario (trabajo de oficina, sin ejercicio)',
-    ligero: 'Ligero (1–2 días de ejercicio por semana)',
-    moderado: 'Moderado (3–4 días de ejercicio por semana)',
-    activo: 'Activo (5–6 días de ejercicio por semana)',
-    atletico: 'Atlético (doble sesión o deporte competitivo)',
+    sedentario: 'Sedentario (oficina, sin ejercicio)',
+    ligero:     'Ligero (1–2 días/semana)',
+    moderado:   'Moderado (3–4 días/semana)',
+    activo:     'Activo (5–6 días/semana)',
+    atletico:   'Atlético (doble sesión / competición)',
   }
 
-  const sexLabel = sex === 'mujer' ? 'Mujer' : sex === 'hombre' ? 'Hombre' : null
+  const systemPrompt = `Eres el mejor nutricionista deportivo y entrenador personal del mundo. Llevas 20 años trabajando con atletas de élite y personas que quieren transformar su cuerpo.
 
-  const systemPrompt = `Eres el mejor nutricionista y entrenador personal del mundo.
-Analizas datos corporales y fotos para crear planes de nutrición ultra personalizados y científicamente respaldados.
-Siempre respondes en español. Eres directo, motivador pero estricto. Tu análisis es preciso y tu dieta es práctica.
-Basas todo en evidencia científica: periodización de la dieta, TDEE ajustado al sexo y nivel de actividad, RIR, progressive overload, ciclado de carbohidratos.`
+Tu dieta es REAL, PRÁCTICA y CIENTÍFICAMENTE PRECISA. Especificas gramos exactos de cada alimento. Tus planes son los que realmente funcionan porque son detallados y adaptados a cada persona.
 
-  const userPrompt = `Analiza a este usuario y genera su plan completo.
+Reglas estrictas:
+1. SIEMPRE especifica gramos exactos (ej: "150g pechuga de pollo", "80g arroz en seco", "2 huevos enteros + 3 claras")
+2. SIEMPRE respeta los macros calculados (±5% de tolerancia)
+3. Los alimentos son reales, accesibles en España/LATAM y económicos
+4. El plan de comidas encaja con el horario de entrenamiento
+5. Si hay intolerancias o preferencias, las respetas al 100%
+6. Tu análisis es directo, honesto y motivador — sin rodeos
+7. Respondes SOLO en español`
 
-DATOS ACTUALES:
-- Peso: ${weight} kg
-- Altura: ${height} cm
-- IMC: ${bmi}
-- Cintura: ${waist ? waist + ' cm' : 'no proporcionada'}
-- Caderas: ${hips ? hips + ' cm' : 'no proporcionada'}
-- Pecho: ${chest ? chest + ' cm' : 'no proporcionado'}
-- Brazos: ${arms ? arms + ' cm' : 'no proporcionados'}
-- Objetivo: ${goalLabels[goal] || goal}${age ? `\n- Edad: ${age} años` : ''}${sexLabel ? `\n- Sexo: ${sexLabel}` : ''}${activityLevel ? `\n- Nivel de actividad: ${activityLabels[activityLevel] || activityLevel}` : ''}
+  const userPrompt = `Genera el plan completo para este usuario.
 
-${preferences ? `PREFERENCIAS DE ENTRENAMIENTO DEL USUARIO:
-- Días preferidos: ${preferences.trainingDays ? preferences.trainingDays + ' días/semana' : 'sin especificar'}
-- Cardio: ${preferences.cardioTime || 'sin especificar'}
-- Equipamiento: ${preferences.equipment || 'gym'}
-${preferences.likedExercises?.length ? `- Ejercicios favoritos: ${preferences.likedExercises.join(', ')}` : ''}
-${preferences.dislikedExercises?.length ? `- Ejercicios EXCLUIDOS (NO incluir): ${preferences.dislikedExercises.join(', ')}` : ''}
-${preferences.trainingNotes ? `- Notas del usuario: ${preferences.trainingNotes}` : ''}
-${preferences.dietNotes ? `- Preferencias de dieta: ${preferences.dietNotes}` : ''}
+═══ DATOS BIOMÉTRICOS ═══
+Peso: ${weight} kg | Altura: ${height} cm | IMC: ${bmi}
+${waist ? `Cintura: ${waist} cm` : ''}${hips ? ` | Caderas: ${hips} cm` : ''}${chest ? ` | Pecho: ${chest} cm` : ''}${arms ? ` | Brazos: ${arms} cm` : ''}
+Objetivo: ${goalLabels[goal] || goal}
+${age ? `Edad: ${age} años` : ''}${sex ? ` | Sexo: ${sex === 'mujer' ? 'Mujer' : 'Hombre'}` : ''}${activityLevel ? ` | Actividad: ${activityLabels[activityLevel] || activityLevel}` : ''}
 
-IMPORTANTE: Respeta ESTRICTAMENTE los ejercicios excluidos y las preferencias de entrenamiento.
-` : ''}
-${previousCheckIn ? `COMPARATIVA CON CHECK-IN ANTERIOR (${new Date(previousCheckIn.createdAt).toLocaleDateString('es-ES')}):
-- Peso anterior: ${previousCheckIn.weight} kg
-- Cambio de peso: ${(weight - previousCheckIn.weight).toFixed(1)} kg
-- Body Score anterior: ${previousCheckIn.bodyScore}
-- Análisis anterior: ${previousCheckIn.analysis}` : 'PRIMER CHECK-IN — establece línea base'}
+${tdee && macros ? `═══ CÁLCULO TDEE (Mifflin-St Jeor) ═══
+TDEE calculado: ${tdee} kcal/día
+Objetivo calórico: ${macros.calories} kcal/día (${macros.deficit > 0 ? `déficit de ${macros.deficit} kcal` : `superávit de ${Math.abs(macros.deficit)} kcal`})
+Proteína objetivo: ${macros.protein}g (${(macros.protein / weight).toFixed(1)}g/kg)
+Grasa objetivo: ${macros.fat}g
+Carbohidratos objetivo: ${macros.carbs}g
 
-${frontPhotoBase64 || sidePhotoBase64 ? 'ANÁLISIS VISUAL: Analiza las fotos adjuntas para evaluar composición corporal, distribución de grasa, tono muscular y progreso visual.' : ''}
+IMPORTANTE: El plan de comidas DEBE sumar exactamente ${macros.calories} kcal con ${macros.protein}g proteína, ${macros.carbs}g carbs y ${macros.fat}g grasa.` : ''}
 
-RESPONDE EXACTAMENTE EN ESTE FORMATO JSON (sin markdown, solo JSON puro):
+${previousCheckIn ? `═══ EVOLUCIÓN (vs check-in del ${new Date(previousCheckIn.createdAt).toLocaleDateString('es-ES')}) ═══
+Peso anterior: ${previousCheckIn.weight} kg → Ahora: ${weight} kg (${(weight - previousCheckIn.weight) > 0 ? '+' : ''}${(weight - previousCheckIn.weight).toFixed(1)} kg)
+Body Score anterior: ${previousCheckIn.bodyScore}
+Análisis anterior: "${previousCheckIn.analysis}"
+
+Ajusta el plan teniendo en cuenta esta evolución. Si perdió peso, valida y ajusta. Si no progresó, identifica posibles causas y corrige.` : '═══ PRIMER CHECK-IN ═══\nEstablece línea base. Sé especialmente preciso en la evaluación inicial.'}
+
+${preferences ? `═══ PREFERENCIAS DEL USUARIO ═══
+${preferences.trainingDays ? `Días de entrenamiento: ${preferences.trainingDays}/semana` : ''}
+${preferences.cardioTime ? `Cardio: ${preferences.cardioTime}` : ''}
+${preferences.equipment ? `Equipamiento: ${preferences.equipment}` : ''}
+${preferences.dislikedExercises?.length ? `Ejercicios EXCLUIDOS (no incluir): ${preferences.dislikedExercises.join(', ')}` : ''}
+${preferences.trainingNotes ? `Notas de entrenamiento: ${preferences.trainingNotes}` : ''}
+${preferences.dietNotes ? `Preferencias/intolerancias alimentarias: ${preferences.dietNotes}` : ''}` : ''}
+
+${frontPhotoBase64 || sidePhotoBase64 ? '═══ ANÁLISIS VISUAL ═══\nAnaliza las fotos adjuntas con precisión clínica: distribución de grasa, retención de agua visible, tono muscular, postura, zonas de acumulación. Compara con check-in anterior si existe.' : ''}
+
+═══ FORMATO DE RESPUESTA ═══
+Responde ÚNICAMENTE con este JSON exacto (sin markdown, sin texto adicional):
+
 {
-  "bodyScore": <número 0-1000>,
+  "bodyScore": <0-1000, basado en composición corporal, progreso y adherencia>,
   "rank": <"BRONCE"|"PLATA"|"ORO"|"PLATINO"|"DIAMANTE"|"LEYENDA">,
-  "analysis": "<análisis personalizado de 3-4 frases, directo y motivador>",
-  "progressSummary": "<si hay check-in anterior: qué cambió y por qué. Si es primero: evaluación inicial>",
-  "calories": <número kcal>,
-  "protein": <gramos>,
-  "carbs": <gramos>,
-  "fat": <gramos>,
+  "analysis": "<3-4 frases. Directo, personalizado, menciona datos específicos del usuario. Si hay progreso, reconócelo. Si hay problemas, nómbralos.>",
+  "progressSummary": "<Qué cambió respecto al check-in anterior y por qué. Si es el primero, evaluación inicial detallada.>",
+  "calories": ${macros?.calories || '<kcal calculadas>'},
+  "protein": ${macros?.protein || '<gramos>'},
+  "carbs": ${macros?.carbs || '<gramos>'},
+  "fat": ${macros?.fat || '<gramos>'},
+  "tdee": ${tdee || '<tdee calculado>'},
   "diet": {
-    "antesDesayuno": ["<item1>", "<item2>"],
+    "antesDesayuno": ["<item con gramos exactos>"],
     "desayuno": {
-      "opcionA": ["<item1>", "<item2>"],
-      "opcionB": ["<item1>", "<item2>"],
-      "opcionC": ["<item1>", "<item2>"]
+      "opcionA": ["<150g X>", "<80g Y en seco>", "<cantidad Z>"],
+      "opcionB": ["<item>", "<item>"],
+      "opcionC": ["<item>", "<item>"]
+    },
+    "mediaManana": {
+      "opcionA": ["<item>"],
+      "opcionB": ["<item>"]
     },
     "almuerzo": {
-      "opcionA": ["<item1>", "<item2>"],
-      "opcionB": ["<item1>", "<item2>"]
-    },
-    "comida": {
-      "opcionA": ["<item1>", "<item2>"],
-      "opcionB": ["<item1>", "<item2>"],
-      "opcionC": ["<item1>", "<item2>"]
+      "opcionA": ["<item>", "<item>", "<item>"],
+      "opcionB": ["<item>", "<item>"],
+      "opcionC": ["<item>", "<item>"]
     },
     "merienda": {
-      "opcionA": ["<item1>", "<item2>"],
-      "opcionB": ["<item1>", "<item2>"]
+      "opcionA": ["<item>"],
+      "opcionB": ["<item>"]
     },
     "cena": {
-      "opcionA": ["<item1>", "<item2>"],
-      "opcionB": ["<item1>", "<item2>"],
-      "opcionC": ["<item1>", "<item2>"]
-    }
+      "opcionA": ["<item>", "<item>", "<item>"],
+      "opcionB": ["<item>", "<item>"],
+      "opcionC": ["<item>", "<item>"]
+    },
+    "antesDeCormir": ["<item opcional si el objetivo lo requiere>"]
+  },
+  "mealCalories": {
+    "desayuno": <kcal>,
+    "mediaManana": <kcal>,
+    "almuerzo": <kcal>,
+    "merienda": <kcal>,
+    "cena": <kcal>
   },
   "training": {
-    "dias": <número 3-5>,
-    "tipo": "<descripción del tipo de entrenamiento>",
+    "dias": <número>,
+    "tipo": "<descripción concisa del tipo de entrenamiento>",
     "rutina": [
       {
         "dia": "Día 1",
         "nombre": "<nombre del día>",
         "ejercicios": [
-          {"nombre": "<ejercicio>", "series": <n>, "reps": "<reps o tiempo>"}
+          {"nombre": "<ejercicio>", "series": <n>, "reps": "<reps o tiempo>", "descanso": "<segundos>"}
         ]
       }
     ]
   },
-  "supplements": ["<suplemento 1>", "<suplemento 2>"],
-  "tips": ["<tip personalizado 1>", "<tip personalizado 2>", "<tip personalizado 3>"],
-  "badges": ["<badge_ganado_1>"]
+  "supplements": ["<suplemento con dosis y momento exacto>"],
+  "tips": ["<tip específico y accionable, no genérico>", "<tip>", "<tip>"],
+  "weeklyPlan": "<resumen del plan semanal: cómo distribuir las comidas los días de entreno vs descanso en 2-3 frases>",
+  "badges": []
 }`
 
   const messages: Anthropic.MessageParam[] = []
 
   if (frontPhotoBase64 || sidePhotoBase64) {
     const content: Anthropic.ContentBlockParam[] = []
-
     if (frontPhotoBase64) {
       const mime = (frontPhotoMime || 'image/jpeg') as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp'
-      content.push({
-        type: 'image',
-        source: { type: 'base64', media_type: mime, data: frontPhotoBase64 },
-      })
+      content.push({ type: 'image', source: { type: 'base64', media_type: mime, data: frontPhotoBase64 } })
     }
     if (sidePhotoBase64) {
       const mime = (sidePhotoMime || 'image/jpeg') as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp'
-      content.push({
-        type: 'image',
-        source: { type: 'base64', media_type: mime, data: sidePhotoBase64 },
-      })
+      content.push({ type: 'image', source: { type: 'base64', media_type: mime, data: sidePhotoBase64 } })
     }
     content.push({ type: 'text', text: userPrompt })
     messages.push({ role: 'user', content })
@@ -174,7 +276,7 @@ RESPONDE EXACTAMENTE EN ESTE FORMATO JSON (sin markdown, solo JSON puro):
 
   const response = await anthropic.messages.create({
     model: hasPhotos ? 'claude-sonnet-4-6' : 'claude-haiku-4-5-20251001',
-    max_tokens: 4000,
+    max_tokens: 6000,
     system: systemPrompt,
     messages,
   })
@@ -183,5 +285,18 @@ RESPONDE EXACTAMENTE EN ESTE FORMATO JSON (sin markdown, solo JSON puro):
   const jsonMatch = text.match(/\{[\s\S]*\}/)
   if (!jsonMatch) throw new Error('No se pudo parsear la respuesta de la IA')
 
-  return JSON.parse(jsonMatch[0])
+  const result = JSON.parse(jsonMatch[0])
+
+  // Validar y corregir macros si se desviaron demasiado
+  if (macros) {
+    const tolerance = 0.08 // 8%
+    if (Math.abs(result.calories - macros.calories) / macros.calories > tolerance) {
+      result.calories = macros.calories
+    }
+    if (Math.abs(result.protein - macros.protein) / macros.protein > tolerance) {
+      result.protein = macros.protein
+    }
+  }
+
+  return result
 }

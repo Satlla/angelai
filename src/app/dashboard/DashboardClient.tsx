@@ -583,6 +583,49 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
               </div>
             )}
 
+            {/* TDEE info */}
+            {dietData.tdee && (
+              <div style={{
+                background: '#0C0D16', border: '1px solid rgba(255,255,255,0.06)',
+                borderRadius: '16px', padding: '16px 20px',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              }}>
+                <div>
+                  <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.28)', letterSpacing: '1px', textTransform: 'uppercase', fontWeight: 600, marginBottom: '4px' }}>
+                    Gasto calórico total
+                  </p>
+                  <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)' }}>
+                    Tu TDEE real (Mifflin-St Jeor)
+                  </p>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <span style={{ fontSize: '22px', fontWeight: 800, letterSpacing: '-1px' }}>{dietData.tdee}</span>
+                  <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.3)', marginLeft: '3px' }}>kcal</span>
+                  {dietData.calories < dietData.tdee && (
+                    <p style={{ fontSize: '11px', color: '#00D9F5', fontWeight: 600, marginTop: '2px' }}>
+                      déficit {dietData.tdee - dietData.calories} kcal
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Plan semanal */}
+            {dietData.weeklyPlan && (
+              <div style={{
+                background: '#0C0D16', border: '1px solid rgba(255,255,255,0.06)',
+                borderRadius: '16px', padding: '20px',
+              }}>
+                <p style={{
+                  fontSize: '10px', letterSpacing: '1.5px', color: 'rgba(255,255,255,0.28)',
+                  textTransform: 'uppercase', fontWeight: 600, marginBottom: '12px',
+                }}>Plan semanal</p>
+                <p style={{ fontSize: '14px', lineHeight: 1.7, color: 'rgba(255,255,255,0.6)' }}>
+                  {dietData.weeklyPlan}
+                </p>
+              </div>
+            )}
+
             {dietData.tips?.length > 0 && (
               <div style={{
                 background: '#0C0D16', border: '1px solid rgba(255,255,255,0.06)',
@@ -617,12 +660,14 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
                 }}>Plan de nutrición</p>
               </div>
               <div style={{ padding: '0 20px 20px' }}>
-                {dietData.diet.antesDesayuno && <MealSection title="Antes del desayuno" items={dietData.diet.antesDesayuno} isSimple />}
-                {dietData.diet.desayuno && <MealSection title="Desayuno" options={dietData.diet.desayuno} />}
-                {dietData.diet.almuerzo && <MealSection title="Almuerzo" options={dietData.diet.almuerzo} />}
-                {dietData.diet.comida && <MealSection title="Comida" options={dietData.diet.comida} />}
-                {dietData.diet.merienda && <MealSection title="Merienda" options={dietData.diet.merienda} />}
-                {dietData.diet.cena && <MealSection title="Cena" options={dietData.diet.cena} />}
+                {dietData.diet.antesDesayuno && <MealSection title="Antes del desayuno" items={dietData.diet.antesDesayuno} isSimple kcal={dietData.mealCalories?.antesDesayuno} />}
+                {dietData.diet.desayuno && <MealSection title="Desayuno" options={dietData.diet.desayuno} kcal={dietData.mealCalories?.desayuno} />}
+                {dietData.diet.mediaManana && <MealSection title="Media mañana" options={dietData.diet.mediaManana} kcal={dietData.mealCalories?.mediaManana} />}
+                {dietData.diet.almuerzo && <MealSection title="Almuerzo" options={dietData.diet.almuerzo} kcal={dietData.mealCalories?.almuerzo} />}
+                {dietData.diet.comida && <MealSection title="Comida" options={dietData.diet.comida} kcal={dietData.mealCalories?.comida} />}
+                {dietData.diet.merienda && <MealSection title="Merienda" options={dietData.diet.merienda} kcal={dietData.mealCalories?.merienda} />}
+                {dietData.diet.cena && <MealSection title="Cena" options={dietData.diet.cena} kcal={dietData.mealCalories?.cena} />}
+                {dietData.diet.antesDeCormir && <MealSection title="Antes de dormir" items={dietData.diet.antesDeCormir} isSimple />}
               </div>
             </div>
 
@@ -1352,12 +1397,13 @@ function TrainingDay({
 }
 
 function MealSection({
-  title, options, items, isSimple,
+  title, options, items, isSimple, kcal,
 }: {
   title: string
   options?: Record<string, string[]>
   items?: string[]
   isSimple?: boolean
+  kcal?: number
 }) {
   const [open, setOpen] = useState(false)
   const [selectedOption, setSelectedOption] = useState('opcionA')
@@ -1371,7 +1417,15 @@ function MealSection({
           justifyContent: 'space-between', cursor: 'pointer',
         }}
       >
-        <span style={{ fontSize: '14px', fontWeight: 600, color: 'rgba(255,255,255,0.8)' }}>{title}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ fontSize: '14px', fontWeight: 600, color: 'rgba(255,255,255,0.8)' }}>{title}</span>
+          {kcal && (
+            <span style={{
+              fontSize: '11px', fontWeight: 600, color: 'rgba(255,255,255,0.3)',
+              background: 'rgba(255,255,255,0.06)', borderRadius: '4px', padding: '2px 6px',
+            }}>{kcal} kcal</span>
+          )}
+        </div>
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none"
           style={{ transform: open ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.2s ease', color: 'rgba(255,255,255,0.25)' }}>
           <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
