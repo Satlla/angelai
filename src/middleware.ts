@@ -3,7 +3,7 @@ import { jwtVerify } from 'jose'
 
 const secret = new TextEncoder().encode(process.env.JWT_SECRET || 'fallback-secret')
 
-const protectedRoutes = ['/dashboard', '/onboarding', '/checkin']
+const protectedRoutes = ['/dashboard', '/onboarding', '/checkin', '/settings']
 
 export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname
@@ -26,5 +26,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/onboarding/:path*', '/checkin/:path*'],
+  matcher: ['/dashboard/:path*', '/onboarding/:path*', '/checkin/:path*', '/settings/:path*'],
 }

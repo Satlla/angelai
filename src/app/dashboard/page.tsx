@@ -10,15 +10,18 @@ export default async function Dashboard() {
   const user = await prisma.user.findUnique({ where: { id: session.userId } })
   if (!user) redirect('/')
 
-  const checkIns = await prisma.checkIn.findMany({
-    where: { userId: user.id },
-    orderBy: { createdAt: 'desc' },
-    take: 20,
-  })
+  const [checkIns, badges, preferences] = await Promise.all([
+    prisma.checkIn.findMany({
+      where: { userId: user.id },
+      orderBy: { createdAt: 'desc' },
+      take: 20,
+    }),
+    prisma.userBadge.findMany({ where: { userId: user.id } }),
+    prisma.userPreferences.findUnique({ where: { userId: user.id } }),
+  ])
 
   if (checkIns.length === 0) redirect('/onboarding')
 
-  const badges = await prisma.userBadge.findMany({ where: { userId: user.id } })
   const latest = checkIns[0]
   const nextCheckIn = new Date(latest.createdAt)
   nextCheckIn.setDate(nextCheckIn.getDate() + 15)
@@ -43,6 +46,15 @@ export default async function Dashboard() {
       }))}
       badges={badges.map((b: typeof badges[0]) => ({ badge: b.badge, earnedAt: b.earnedAt.toISOString() }))}
       daysLeft={daysLeft}
+      preferences={{
+        trainingDays: preferences?.trainingDays ?? null,
+        cardioTime: preferences?.cardioTime ?? null,
+        equipment: preferences?.equipment ?? null,
+        likedExercises: preferences?.likedExercises ? JSON.parse(preferences.likedExercises) : [],
+        dislikedExercises: preferences?.dislikedExercises ? JSON.parse(preferences.dislikedExercises) : [],
+        trainingNotes: preferences?.trainingNotes ?? null,
+        dietNotes: preferences?.dietNotes ?? null,
+      }}
     />
   )
 }

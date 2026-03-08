@@ -5,7 +5,10 @@ import { createSession } from '@/lib/auth'
 export async function POST(req: NextRequest) {
   const { email } = await req.json()
 
-  if (!email || email.toLowerCase() !== process.env.ALLOWED_EMAIL?.toLowerCase()) {
+  const allowed = (process.env.ALLOWED_EMAILS || process.env.ALLOWED_EMAIL || '')
+    .split(',').map(e => e.trim().toLowerCase()).filter(Boolean)
+
+  if (!email || !allowed.includes(email.toLowerCase())) {
     return NextResponse.json({ error: 'Email no autorizado. Esta plataforma es de acceso privado.' }, { status: 401 })
   }
 

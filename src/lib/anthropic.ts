@@ -12,6 +12,9 @@ export async function analyzBodyAndGenerateDiet(params: {
   chest?: number
   arms?: number
   goal: string
+  age?: number
+  sex?: string
+  activityLevel?: string
   previousCheckIn?: {
     weight: number
     bodyScore: number
@@ -20,8 +23,19 @@ export async function analyzBodyAndGenerateDiet(params: {
   } | null
   frontPhotoBase64?: string
   sidePhotoBase64?: string
+  frontPhotoMime?: string
+  sidePhotoMime?: string
+  preferences?: {
+    trainingDays?: number | null
+    cardioTime?: string | null
+    equipment?: string | null
+    likedExercises?: string[]
+    dislikedExercises?: string[]
+    trainingNotes?: string | null
+    dietNotes?: string | null
+  } | null
 }) {
-  const { weight, height, waist, hips, chest, arms, goal, previousCheckIn, frontPhotoBase64, sidePhotoBase64 } = params
+  const { weight, height, waist, hips, chest, arms, goal, age, sex, activityLevel, previousCheckIn, frontPhotoBase64, sidePhotoBase64, frontPhotoMime, sidePhotoMime, preferences } = params
 
   const bmi = (weight / ((height / 100) ** 2)).toFixed(1)
   const goalLabels: Record<string, string> = {
@@ -31,12 +45,22 @@ export async function analyzBodyAndGenerateDiet(params: {
     perdida: 'pérdida de peso significativa',
   }
 
-  const systemPrompt = `Eres el mejor nutricionista y entrenador personal del mundo, especializado en mujeres.
+  const activityLabels: Record<string, string> = {
+    sedentario: 'Sedentario (trabajo de oficina, sin ejercicio)',
+    ligero: 'Ligero (1–2 días de ejercicio por semana)',
+    moderado: 'Moderado (3–4 días de ejercicio por semana)',
+    activo: 'Activo (5–6 días de ejercicio por semana)',
+    atletico: 'Atlético (doble sesión o deporte competitivo)',
+  }
+
+  const sexLabel = sex === 'mujer' ? 'Mujer' : sex === 'hombre' ? 'Hombre' : null
+
+  const systemPrompt = `Eres el mejor nutricionista y entrenador personal del mundo.
 Analizas datos corporales y fotos para crear planes de nutrición ultra personalizados y científicamente respaldados.
 Siempre respondes en español. Eres directo, motivador pero estricto. Tu análisis es preciso y tu dieta es práctica.
-Basas todo en evidencia científica: periodización de la dieta, RIR, progressive overload, ciclado de carbohidratos.`
+Basas todo en evidencia científica: periodización de la dieta, TDEE ajustado al sexo y nivel de actividad, RIR, progressive overload, ciclado de carbohidratos.`
 
-  const userPrompt = `Analiza esta usuaria y genera su plan completo.
+  const userPrompt = `Analiza a este usuario y genera su plan completo.
 
 DATOS ACTUALES:
 - Peso: ${weight} kg
@@ -46,8 +70,19 @@ DATOS ACTUALES:
 - Caderas: ${hips ? hips + ' cm' : 'no proporcionada'}
 - Pecho: ${chest ? chest + ' cm' : 'no proporcionado'}
 - Brazos: ${arms ? arms + ' cm' : 'no proporcionados'}
-- Objetivo: ${goalLabels[goal] || goal}
+- Objetivo: ${goalLabels[goal] || goal}${age ? `\n- Edad: ${age} años` : ''}${sexLabel ? `\n- Sexo: ${sexLabel}` : ''}${activityLevel ? `\n- Nivel de actividad: ${activityLabels[activityLevel] || activityLevel}` : ''}
 
+${preferences ? `PREFERENCIAS DE ENTRENAMIENTO DEL USUARIO:
+- Días preferidos: ${preferences.trainingDays ? preferences.trainingDays + ' días/semana' : 'sin especificar'}
+- Cardio: ${preferences.cardioTime || 'sin especificar'}
+- Equipamiento: ${preferences.equipment || 'gym'}
+${preferences.likedExercises?.length ? `- Ejercicios favoritos: ${preferences.likedExercises.join(', ')}` : ''}
+${preferences.dislikedExercises?.length ? `- Ejercicios EXCLUIDOS (NO incluir): ${preferences.dislikedExercises.join(', ')}` : ''}
+${preferences.trainingNotes ? `- Notas del usuario: ${preferences.trainingNotes}` : ''}
+${preferences.dietNotes ? `- Preferencias de dieta: ${preferences.dietNotes}` : ''}
+
+IMPORTANTE: Respeta ESTRICTAMENTE los ejercicios excluidos y las preferencias de entrenamiento.
+` : ''}
 ${previousCheckIn ? `COMPARATIVA CON CHECK-IN ANTERIOR (${new Date(previousCheckIn.createdAt).toLocaleDateString('es-ES')}):
 - Peso anterior: ${previousCheckIn.weight} kg
 - Cambio de peso: ${(weight - previousCheckIn.weight).toFixed(1)} kg
@@ -116,15 +151,17 @@ RESPONDE EXACTAMENTE EN ESTE FORMATO JSON (sin markdown, solo JSON puro):
     const content: Anthropic.ContentBlockParam[] = []
 
     if (frontPhotoBase64) {
+      const mime = (frontPhotoMime || 'image/jpeg') as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp'
       content.push({
         type: 'image',
-        source: { type: 'base64', media_type: 'image/jpeg', data: frontPhotoBase64 },
+        source: { type: 'base64', media_type: mime, data: frontPhotoBase64 },
       })
     }
     if (sidePhotoBase64) {
+      const mime = (sidePhotoMime || 'image/jpeg') as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp'
       content.push({
         type: 'image',
-        source: { type: 'base64', media_type: 'image/jpeg', data: sidePhotoBase64 },
+        source: { type: 'base64', media_type: mime, data: sidePhotoBase64 },
       })
     }
     content.push({ type: 'text', text: userPrompt })
@@ -133,8 +170,10 @@ RESPONDE EXACTAMENTE EN ESTE FORMATO JSON (sin markdown, solo JSON puro):
     messages.push({ role: 'user', content: userPrompt })
   }
 
+  const hasPhotos = !!(frontPhotoBase64 || sidePhotoBase64)
+
   const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-6',
+    model: hasPhotos ? 'claude-sonnet-4-6' : 'claude-haiku-4-5-20251001',
     max_tokens: 4000,
     system: systemPrompt,
     messages,

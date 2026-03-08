@@ -8,6 +8,21 @@ export async function POST(req: NextRequest) {
   const session = await getSession()
   if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
+  // Guard: no se puede hacer check-in antes de 15 días (excepto el primero)
+  const lastCheckIn = await prisma.checkIn.findFirst({
+    where: { userId: session.userId },
+    orderBy: { createdAt: 'desc' },
+    select: { createdAt: true, weight: true, bodyScore: true, analysis: true },
+  })
+
+  if (lastCheckIn) {
+    const nextAllowed = new Date(lastCheckIn.createdAt)
+    nextAllowed.setDate(nextAllowed.getDate() + 15)
+    if (new Date() < nextAllowed) {
+      return NextResponse.json({ error: 'Aún no puedes hacer check-in.' }, { status: 403 })
+    }
+  }
+
   const formData = await req.formData()
 
   const weight = parseFloat(formData.get('weight') as string)
@@ -17,23 +32,36 @@ export async function POST(req: NextRequest) {
   const chest = formData.get('chest') ? parseFloat(formData.get('chest') as string) : undefined
   const arms = formData.get('arms') ? parseFloat(formData.get('arms') as string) : undefined
   const goal = (formData.get('goal') as string) || 'definicion'
+  const age = formData.get('age') ? parseInt(formData.get('age') as string) : undefined
+  const sex = (formData.get('sex') as string) || undefined
+  const activityLevel = (formData.get('activityLevel') as string) || undefined
+
+  if (!weight || !height || isNaN(weight) || isNaN(height)) {
+    return NextResponse.json({ error: 'Peso y altura son obligatorios.' }, { status: 400 })
+  }
 
   const frontPhoto = formData.get('frontPhoto') as File | null
   const sidePhoto = formData.get('sidePhoto') as File | null
 
-  // Subir fotos a Vercel Blob (se eliminarán a los 30 días con una cron job)
   let frontPhotoUrl: string | undefined
   let sidePhotoUrl: string | undefined
   let frontPhotoBase64: string | undefined
   let sidePhotoBase64: string | undefined
+  let frontPhotoMime: string | undefined
+  let sidePhotoMime: string | undefined
 
   if (frontPhoto && frontPhoto.size > 0) {
     const bytes = await frontPhoto.arrayBuffer()
     const buffer = Buffer.from(bytes)
     frontPhotoBase64 = buffer.toString('base64')
+    frontPhotoMime = frontPhoto.type || 'image/jpeg'
     if (process.env.BLOB_READ_WRITE_TOKEN) {
-      const blob = await put(`angelai/photos/${session.userId}/front-${Date.now()}.jpg`, buffer, { access: 'public' })
-      frontPhotoUrl = blob.url
+      try {
+        const blob = await put(`angelai/photos/${session.userId}/front-${Date.now()}.jpg`, buffer, { access: 'public' })
+        frontPhotoUrl = blob.url
+      } catch {
+        // Foto no es bloqueante — continúa sin ella
+      }
     }
   }
 
@@ -41,31 +69,71 @@ export async function POST(req: NextRequest) {
     const bytes = await sidePhoto.arrayBuffer()
     const buffer = Buffer.from(bytes)
     sidePhotoBase64 = buffer.toString('base64')
+    sidePhotoMime = sidePhoto.type || 'image/jpeg'
     if (process.env.BLOB_READ_WRITE_TOKEN) {
-      const blob = await put(`angelai/photos/${session.userId}/side-${Date.now()}.jpg`, buffer, { access: 'public' })
-      sidePhotoUrl = blob.url
+      try {
+        const blob = await put(`angelai/photos/${session.userId}/side-${Date.now()}.jpg`, buffer, { access: 'public' })
+        sidePhotoUrl = blob.url
+      } catch {
+        // Foto no es bloqueante — continúa sin ella
+      }
     }
   }
 
-  // Obtener check-in anterior
-  const previousCheckIn = await prisma.checkIn.findFirst({
-    where: { userId: session.userId },
-    orderBy: { createdAt: 'desc' },
-    select: { weight: true, bodyScore: true, analysis: true, createdAt: true },
-  })
+  // Preferencias y check-in anterior en paralelo
+  const [userPreferences, previousCheckIn] = await Promise.all([
+    prisma.userPreferences.findUnique({ where: { userId: session.userId } }),
+    prisma.checkIn.findFirst({
+      where: { userId: session.userId },
+      orderBy: { createdAt: 'desc' },
+      select: { weight: true, bodyScore: true, analysis: true, createdAt: true },
+    }),
+  ])
 
-  // Llamar a Claude
-  const result = await analyzBodyAndGenerateDiet({
-    weight, height, waist, hips, chest, arms, goal,
-    previousCheckIn: previousCheckIn ? {
-      weight: previousCheckIn.weight,
-      bodyScore: previousCheckIn.bodyScore || 0,
-      analysis: previousCheckIn.analysis || '',
-      createdAt: previousCheckIn.createdAt.toISOString(),
-    } : null,
-    frontPhotoBase64,
-    sidePhotoBase64,
-  })
+  // Llamar a Claude con reintentos
+  let result
+  let attempts = 0
+  while (attempts < 2) {
+    try {
+      result = await analyzBodyAndGenerateDiet({
+        weight, height, waist, hips, chest, arms, goal, age, sex, activityLevel,
+        previousCheckIn: previousCheckIn ? {
+          weight: previousCheckIn.weight,
+          bodyScore: previousCheckIn.bodyScore || 0,
+          analysis: previousCheckIn.analysis || '',
+          createdAt: previousCheckIn.createdAt.toISOString(),
+        } : null,
+        frontPhotoBase64,
+        sidePhotoBase64,
+        frontPhotoMime,
+        sidePhotoMime,
+        preferences: userPreferences ? {
+          trainingDays: userPreferences.trainingDays,
+          cardioTime: userPreferences.cardioTime,
+          equipment: userPreferences.equipment,
+          likedExercises: userPreferences.likedExercises ? JSON.parse(userPreferences.likedExercises) : [],
+          dislikedExercises: userPreferences.dislikedExercises ? JSON.parse(userPreferences.dislikedExercises) : [],
+          trainingNotes: userPreferences.trainingNotes,
+          dietNotes: userPreferences.dietNotes,
+        } : null,
+      })
+      break
+    } catch (err) {
+      attempts++
+      if (attempts >= 2) {
+        console.error('Claude error after retries:', err)
+        return NextResponse.json(
+          { error: 'El análisis tardó demasiado. Inténtalo de nuevo en unos minutos.' },
+          { status: 503 }
+        )
+      }
+      await new Promise(r => setTimeout(r, 2000))
+    }
+  }
+
+  if (!result) {
+    return NextResponse.json({ error: 'No se pudo generar el plan.' }, { status: 503 })
+  }
 
   const photoExpires = new Date()
   photoExpires.setDate(photoExpires.getDate() + 30)
@@ -79,6 +147,9 @@ export async function POST(req: NextRequest) {
       chest: chest || null,
       arms: arms || null,
       goal,
+      age: age || null,
+      sex: sex || null,
+      activityLevel: activityLevel || null,
       frontPhotoUrl: frontPhotoUrl || null,
       sidePhotoUrl: sidePhotoUrl || null,
       photoExpiresAt: frontPhotoUrl ? photoExpires : null,
