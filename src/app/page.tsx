@@ -195,10 +195,12 @@ export default function Landing() {
             <span>Nutrición con IA · Acceso privado</span>
           </div>
           <h1 className="hero-h1">
-            Tu cuerpo.<br />
-            <span className="gradient-text">Tu ciencia.</span><br />
-            Tu plan.
+            Nobody can<br />
+            <span className="gradient-text">stop you.</span>
           </h1>
+          <p style={{ fontSize: '20px', color: 'rgba(255,255,255,0.55)', fontWeight: 400, letterSpacing: '-0.3px', margin: '0 0 8px' }}>
+            Encuentra tu grandeza.
+          </p>
           <div className="hero-bottom">
             <p className="hero-desc">
               Calculamos tu metabolismo con precisión científica, analizamos tu cuerpo con IA y te damos un plan con{' '}

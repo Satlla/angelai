@@ -71,6 +71,10 @@ model UserPreferences {
   dietNotes         String?        // alergias, preferencias, intolerancias
   freeTextContext   String?        // contexto libre del usuario
 
+  // Datos físicos editables (override del check-in)
+  height            Float?
+  activityLevel     String?
+
   // Notificaciones
   weeklyEmailEnabled Boolean @default(true)
 

@@ -19,7 +19,7 @@ export default async function Settings() {
     }),
     prisma.userPreferences.findUnique({
       where: { userId: session.userId },
-      select: { dietNotes: true, weeklyEmailEnabled: true },
+      select: { dietNotes: true, weeklyEmailEnabled: true, height: true, activityLevel: true },
     }),
   ])
 
@@ -31,8 +31,8 @@ export default async function Settings() {
       defaultName={user.name || ''}
       defaultAge={user.age ? String(user.age) : ''}
       defaultSex={user.sex || ''}
-      height={lastCheckIn?.height || null}
-      activityLevel={lastCheckIn?.activityLevel || null}
+      height={prefs?.height ?? lastCheckIn?.height ?? null}
+      activityLevel={prefs?.activityLevel ?? lastCheckIn?.activityLevel ?? null}
       dietNotes={prefs?.dietNotes || ''}
       weeklyEmailEnabled={prefs?.weeklyEmailEnabled ?? true}
     />

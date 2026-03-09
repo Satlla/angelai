@@ -2,17 +2,19 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
-const ACTIVITY_LABELS: Record<string, string> = {
-  sedentario: 'Sedentario',
-  ligero: 'Ligero (1–2 días/sem)',
-  moderado: 'Moderado (3–4 días/sem)',
-  activo: 'Activo (5–6 días/sem)',
-  atletico: 'Atlético',
-}
+
+const ACTIVITY_OPTIONS = [
+  { value: 'sedentario', label: 'Sedentario', desc: 'Oficina, sin ejercicio' },
+  { value: 'ligero', label: 'Ligero', desc: '1–2 días/sem' },
+  { value: 'moderado', label: 'Moderado', desc: '3–4 días/sem' },
+  { value: 'activo', label: 'Activo', desc: '5–6 días/sem' },
+  { value: 'atletico', label: 'Atlético', desc: 'Doble sesión' },
+]
 
 export default function SettingsClient({
   email, defaultName, defaultAge, defaultSex,
-  height, activityLevel, dietNotes: initialDietNotes,
+  height: initialHeight, activityLevel: initialActivityLevel,
+  dietNotes: initialDietNotes,
   weeklyEmailEnabled: initialWeeklyEmail,
 }: {
   email: string
@@ -27,6 +29,8 @@ export default function SettingsClient({
   const [name, setName] = useState(defaultName)
   const [age, setAge] = useState(defaultAge)
   const [sex, setSex] = useState(defaultSex)
+  const [height, setHeight] = useState(initialHeight ? String(initialHeight) : '')
+  const [activityLevel, setActivityLevel] = useState(initialActivityLevel || '')
   const [dietNotes, setDietNotes] = useState(initialDietNotes)
   const [weeklyEmailEnabled, setWeeklyEmailEnabled] = useState(initialWeeklyEmail)
   const [saving, setSaving] = useState(false)
@@ -50,7 +54,12 @@ export default function SettingsClient({
         fetch('/api/preferences', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ dietNotes, weeklyEmailEnabled }),
+          body: JSON.stringify({
+            dietNotes,
+            weeklyEmailEnabled,
+            ...(height ? { height: parseFloat(height) } : {}),
+            ...(activityLevel ? { activityLevel } : {}),
+          }),
         }),
       ])
 
@@ -152,34 +161,48 @@ export default function SettingsClient({
           </div>
         </div>
 
-        {/* Info solo lectura del último check-in */}
-        {(height || activityLevel) && (
-          <div style={{
-            background: '#0C0D16', border: '1px solid rgba(255,255,255,0.06)',
-            borderRadius: '14px', padding: '16px 18px', marginBottom: '28px',
-          }}>
-            <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.28)', letterSpacing: '1px', textTransform: 'uppercase', fontWeight: 600, marginBottom: '12px' }}>
-              Del último check-in
-            </p>
-            <div style={{ display: 'flex', gap: '24px' }}>
-              {height && (
-                <div>
-                  <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.25)', marginBottom: '3px' }}>Altura</p>
-                  <p style={{ fontSize: '15px', fontWeight: 600 }}>{height} cm</p>
-                </div>
-              )}
-              {activityLevel && (
-                <div>
-                  <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.25)', marginBottom: '3px' }}>Actividad</p>
-                  <p style={{ fontSize: '15px', fontWeight: 600 }}>{ACTIVITY_LABELS[activityLevel] || activityLevel}</p>
-                </div>
-              )}
-            </div>
-            <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.2)', marginTop: '10px' }}>
-              Para cambiarlos, actualízalos en tu próximo check-in.
-            </p>
+        {/* Altura */}
+        <div style={{ marginBottom: '20px' }}>
+          <label style={{ fontSize: '12px', color: 'rgba(255,255,255,0.35)', fontWeight: 500, display: 'block', marginBottom: '8px' }}>
+            Altura
+          </label>
+          <div className="input-with-unit" style={{ maxWidth: '140px' }}>
+            <input
+              type="number" placeholder="175" value={height}
+              onChange={e => setHeight(e.target.value)}
+              className="input-field" style={{ fontSize: '16px' }}
+              min="100" max="250" step="0.1"
+            />
+            <span className="input-unit">cm</span>
           </div>
-        )}
+        </div>
+
+        {/* Nivel de actividad */}
+        <div style={{ marginBottom: '28px' }}>
+          <label style={{ fontSize: '12px', color: 'rgba(255,255,255,0.35)', fontWeight: 500, display: 'block', marginBottom: '10px' }}>
+            Nivel de actividad
+          </label>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            {ACTIVITY_OPTIONS.map(opt => (
+              <button
+                key={opt.value} type="button"
+                onClick={() => setActivityLevel(opt.value)}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '10px 14px', borderRadius: '10px', cursor: 'pointer',
+                  fontSize: '14px', fontWeight: 500, fontFamily: 'inherit', textAlign: 'left' as const,
+                  background: activityLevel === opt.value ? 'rgba(180,79,255,0.12)' : 'rgba(255,255,255,0.04)',
+                  border: `1px solid ${activityLevel === opt.value ? 'rgba(180,79,255,0.4)' : 'rgba(255,255,255,0.07)'}`,
+                  color: activityLevel === opt.value ? '#B44FFF' : 'rgba(255,255,255,0.55)',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                <span>{opt.label}</span>
+                <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.28)', fontWeight: 400 }}>{opt.desc}</span>
+              </button>
+            ))}
+          </div>
+        </div>
 
         {/* Preferencias de dieta */}
         <div style={{ marginBottom: '24px' }}>
