@@ -102,6 +102,8 @@ export async function analyzBodyAndGenerateDiet(params: {
   frontPhotoMime?: string
   sidePhotoMime?: string
   freeTextContext?: string | null
+  currentDiet?: string | null
+  currentTraining?: string | null
   preferences?: {
     trainingDays?: number | null
     cardioTime?: string | null
@@ -116,7 +118,7 @@ export async function analyzBodyAndGenerateDiet(params: {
     weight, height, waist, hips, chest, arms, thighs, calves, shoulders, goal,
     age, sex, activityLevel, previousCheckIn,
     frontPhotoBase64, sidePhotoBase64, frontPhotoMime, sidePhotoMime,
-    freeTextContext, preferences,
+    freeTextContext, currentDiet, currentTraining, preferences,
   } = params
 
   const bmi = (weight / ((height / 100) ** 2)).toFixed(1)
@@ -295,6 +297,16 @@ ${freeTextContext ? `═══ CONTEXTO ADICIONAL DEL USUARIO ═══
 El usuario ha escrito lo siguiente sobre su vida, horarios, gustos y situación personal. Tenlo muy en cuenta al crear el plan:
 
 "${freeTextContext}"` : ''}
+
+${currentDiet ? `═══ DIETA ACTUAL DEL USUARIO ═══
+El usuario ya lleva una dieta. Analízala, identifica sus puntos fuertes y débiles, y úsala como referencia para diseñar la nueva. Adapta el nuevo plan a sus preferencias y hábitos alimentarios actuales, mejorando lo que sea necesario para alcanzar su objetivo:
+
+${currentDiet}` : ''}
+
+${currentTraining ? `═══ ENTRENAMIENTO ACTUAL DEL USUARIO ═══
+El usuario ya tiene una rutina de entrenamiento. Analízala y úsala como referencia para diseñar la nueva rutina. Respeta su nivel, los grupos musculares que trabaja y los ejercicios que conoce, mejorando la estructura si es necesario para su objetivo:
+
+${currentTraining}` : ''}
 
 ${frontPhotoBase64 || sidePhotoBase64 ? '═══ ANÁLISIS VISUAL ═══\nAnaliza las fotos adjuntas con precisión clínica: distribución de grasa, retención de agua visible, tono muscular, postura, zonas de acumulación. Compara con check-in anterior si existe.' : ''}
 

@@ -59,6 +59,8 @@ export async function POST(req: NextRequest) {
   const sex = (formData.get('sex') as string) || undefined
   const activityLevel = (formData.get('activityLevel') as string) || undefined
   const freeTextContext = (formData.get('freeTextContext') as string) || undefined
+  const currentDiet = (formData.get('currentDiet') as string) || undefined
+  const currentTraining = (formData.get('currentTraining') as string) || undefined
 
   if (!weight || !height || isNaN(weight) || isNaN(height)) {
     return NextResponse.json({ error: 'Peso y altura son obligatorios.' }, { status: 400 })
@@ -122,6 +124,8 @@ export async function POST(req: NextRequest) {
       result = await analyzBodyAndGenerateDiet({
         weight, height, waist, hips, chest, arms, thighs, calves, shoulders, goal, age, sex, activityLevel,
         freeTextContext: freeTextContext || null,
+        currentDiet: currentDiet || null,
+        currentTraining: currentTraining || null,
         previousCheckIn: previousCheckIn ? {
           weight: previousCheckIn.weight,
           bodyScore: previousCheckIn.bodyScore || 0,

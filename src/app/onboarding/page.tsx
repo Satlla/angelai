@@ -44,6 +44,10 @@ export default function Onboarding() {
   const [frontPreview, setFrontPreview] = useState<string | null>(null)
   const [sidePreview, setSidePreview] = useState<string | null>(null)
   const [freeTextContext, setFreeTextContext] = useState('')
+  const [currentDiet, setCurrentDiet] = useState('')
+  const [currentTraining, setCurrentTraining] = useState('')
+  const [showCurrentDiet, setShowCurrentDiet] = useState(false)
+  const [showCurrentTraining, setShowCurrentTraining] = useState(false)
   const [measureModal, setMeasureModal] = useState<{ open: boolean; tab: 'waist' | 'hips' | 'chest' | 'arms' | 'thighs' | 'calves' | 'shoulders' }>({ open: false, tab: 'waist' })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -88,6 +92,8 @@ export default function Onboarding() {
       if (frontPhoto) fd.append('frontPhoto', frontPhoto)
       if (sidePhoto) fd.append('sidePhoto', sidePhoto)
       if (freeTextContext) fd.append('freeTextContext', freeTextContext)
+      if (currentDiet) fd.append('currentDiet', currentDiet)
+      if (currentTraining) fd.append('currentTraining', currentTraining)
 
       const res = await fetch('/api/analyze', { method: 'POST', body: fd })
       if (!res.ok) throw new Error('Error en el análisis')
@@ -627,9 +633,106 @@ export default function Onboarding() {
                 marginBottom: '8px',
               }}
             />
-            <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.2)', marginBottom: '28px', textAlign: 'right' }}>
+            <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.2)', marginBottom: '20px', textAlign: 'right' }}>
               {freeTextContext.length}/2000
             </p>
+
+            {/* Dieta actual */}
+            <div style={{ marginBottom: '12px' }}>
+              <button
+                type="button"
+                onClick={() => setShowCurrentDiet(v => !v)}
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  background: showCurrentDiet ? 'rgba(180,79,255,0.08)' : 'rgba(255,255,255,0.03)',
+                  border: `1px solid ${showCurrentDiet ? 'rgba(180,79,255,0.3)' : 'rgba(255,255,255,0.08)'}`,
+                  borderRadius: '12px', padding: '12px 16px', cursor: 'pointer',
+                  color: showCurrentDiet ? 'rgba(180,79,255,0.9)' : 'rgba(255,255,255,0.4)',
+                  fontSize: '13px', fontWeight: 500, fontFamily: 'inherit', transition: 'all 0.18s',
+                }}
+              >
+                <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+                    <rect x="2" y="2" width="11" height="11" rx="2" stroke="currentColor" strokeWidth="1.3"/>
+                    <line x1="4.5" y1="5.5" x2="10.5" y2="5.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                    <line x1="4.5" y1="7.5" x2="10.5" y2="7.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                    <line x1="4.5" y1="9.5" x2="8" y2="9.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                  </svg>
+                  ¿Tienes una dieta actual? Pégala aquí
+                </span>
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ transform: showCurrentDiet ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.18s' }}>
+                  <path d="M4 2l4 4-4 4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </button>
+              {showCurrentDiet && (
+                <div style={{ marginTop: '8px' }}>
+                  <textarea
+                    value={currentDiet}
+                    onChange={e => setCurrentDiet(e.target.value)}
+                    placeholder={'Pega tu dieta actual aquí. Puede ser un texto simple, una tabla, macros, comidas... La IA la leerá y la tendrá en cuenta para hacer la adaptación a tu nuevo objetivo.\n\nEj: Desayuno: 80g avena + proteína\nComida: pollo con arroz\nCena: merluza con verduras...'}
+                    rows={6}
+                    maxLength={3000}
+                    style={{
+                      width: '100%', background: 'rgba(255,255,255,0.03)',
+                      border: '1px solid rgba(180,79,255,0.2)', borderRadius: '12px',
+                      color: 'white', padding: '14px', fontSize: '14px',
+                      fontFamily: 'inherit', resize: 'none', outline: 'none', lineHeight: 1.6,
+                    }}
+                  />
+                  <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.18)', marginTop: '4px', textAlign: 'right' }}>
+                    {currentDiet.length}/3000
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Entrenamiento actual */}
+            <div style={{ marginBottom: '28px' }}>
+              <button
+                type="button"
+                onClick={() => setShowCurrentTraining(v => !v)}
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  background: showCurrentTraining ? 'rgba(0,217,245,0.06)' : 'rgba(255,255,255,0.03)',
+                  border: `1px solid ${showCurrentTraining ? 'rgba(0,217,245,0.25)' : 'rgba(255,255,255,0.08)'}`,
+                  borderRadius: '12px', padding: '12px 16px', cursor: 'pointer',
+                  color: showCurrentTraining ? 'rgba(0,217,245,0.85)' : 'rgba(255,255,255,0.4)',
+                  fontSize: '13px', fontWeight: 500, fontFamily: 'inherit', transition: 'all 0.18s',
+                }}
+              >
+                <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+                    <path d="M2 7.5h2M11 7.5h2M4 7.5h7" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+                    <rect x="3.5" y="5" width="1.5" height="5" rx="0.5" fill="currentColor"/>
+                    <rect x="10" y="5" width="1.5" height="5" rx="0.5" fill="currentColor"/>
+                  </svg>
+                  ¿Tienes un entrenamiento actual? Pégalo aquí
+                </span>
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ transform: showCurrentTraining ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.18s' }}>
+                  <path d="M4 2l4 4-4 4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </button>
+              {showCurrentTraining && (
+                <div style={{ marginTop: '8px' }}>
+                  <textarea
+                    value={currentTraining}
+                    onChange={e => setCurrentTraining(e.target.value)}
+                    placeholder={'Pega tu rutina de entrenamiento aquí. La IA la usará como referencia para diseñar tu nuevo plan adaptado a tu objetivo.\n\nEj: Lunes: Pecho + Tríceps\n- Press banca 4x8\n- Fondos 3x12\nMartes: Espalda + Bíceps...'}
+                    rows={6}
+                    maxLength={3000}
+                    style={{
+                      width: '100%', background: 'rgba(255,255,255,0.03)',
+                      border: '1px solid rgba(0,217,245,0.15)', borderRadius: '12px',
+                      color: 'white', padding: '14px', fontSize: '14px',
+                      fontFamily: 'inherit', resize: 'none', outline: 'none', lineHeight: 1.6,
+                    }}
+                  />
+                  <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.18)', marginTop: '4px', textAlign: 'right' }}>
+                    {currentTraining.length}/3000
+                  </p>
+                </div>
+              )}
+            </div>
 
             {error && (
               <p style={{ color: '#FF6B6B', fontSize: '13px', marginBottom: '16px', textAlign: 'center' }}>
