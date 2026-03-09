@@ -51,6 +51,9 @@ export async function POST(req: NextRequest) {
   const hips = formData.get('hips') ? parseFloat(formData.get('hips') as string) : undefined
   const chest = formData.get('chest') ? parseFloat(formData.get('chest') as string) : undefined
   const arms = formData.get('arms') ? parseFloat(formData.get('arms') as string) : undefined
+  const thighs = formData.get('thighs') ? parseFloat(formData.get('thighs') as string) : undefined
+  const calves = formData.get('calves') ? parseFloat(formData.get('calves') as string) : undefined
+  const shoulders = formData.get('shoulders') ? parseFloat(formData.get('shoulders') as string) : undefined
   const goal = (formData.get('goal') as string) || 'definicion'
   const age = formData.get('age') ? parseInt(formData.get('age') as string) : undefined
   const sex = (formData.get('sex') as string) || undefined
@@ -117,7 +120,7 @@ export async function POST(req: NextRequest) {
   while (attempts < 2) {
     try {
       result = await analyzBodyAndGenerateDiet({
-        weight, height, waist, hips, chest, arms, goal, age, sex, activityLevel,
+        weight, height, waist, hips, chest, arms, thighs, calves, shoulders, goal, age, sex, activityLevel,
         freeTextContext: freeTextContext || null,
         previousCheckIn: previousCheckIn ? {
           weight: previousCheckIn.weight,
@@ -168,6 +171,9 @@ export async function POST(req: NextRequest) {
       hips: hips || null,
       chest: chest || null,
       arms: arms || null,
+      thighs: thighs || null,
+      calves: calves || null,
+      shoulders: shoulders || null,
       goal,
       age: age || null,
       sex: sex || null,

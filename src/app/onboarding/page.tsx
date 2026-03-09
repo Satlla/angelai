@@ -1,6 +1,7 @@
 'use client'
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import MeasureGuideModal, { MeasureHelpButton } from '@/components/MeasureGuideModal'
 
 const GOALS = [
   { value: 'definicion', label: 'Definición', desc: 'Bajar grasa manteniendo músculo' },
@@ -16,6 +17,9 @@ const MEASUREMENTS = [
   { key: 'hips', label: 'Caderas', placeholder: '95', unit: 'cm' },
   { key: 'chest', label: 'Pecho', placeholder: '100', unit: 'cm' },
   { key: 'arms', label: 'Brazos', placeholder: '32', unit: 'cm' },
+  { key: 'thighs', label: 'Muslos', placeholder: '55', unit: 'cm' },
+  { key: 'calves', label: 'Pantorrilla', placeholder: '36', unit: 'cm' },
+  { key: 'shoulders', label: 'Hombros', placeholder: '110', unit: 'cm' },
 ]
 
 const ACTIVITY_LEVELS = [
@@ -34,12 +38,13 @@ export default function Onboarding() {
   const [age, setAge] = useState('')
   const [sex, setSex] = useState('')
   const [activityLevel, setActivityLevel] = useState('')
-  const [form, setForm] = useState({ weight: '', height: '', waist: '', hips: '', chest: '', arms: '' })
+  const [form, setForm] = useState({ weight: '', height: '', waist: '', hips: '', chest: '', arms: '', thighs: '', calves: '', shoulders: '' })
   const [frontPhoto, setFrontPhoto] = useState<File | null>(null)
   const [sidePhoto, setSidePhoto] = useState<File | null>(null)
   const [frontPreview, setFrontPreview] = useState<string | null>(null)
   const [sidePreview, setSidePreview] = useState<string | null>(null)
   const [freeTextContext, setFreeTextContext] = useState('')
+  const [measureModal, setMeasureModal] = useState<{ open: boolean; tab: 'waist' | 'hips' | 'chest' | 'arms' | 'thighs' | 'calves' | 'shoulders' }>({ open: false, tab: 'waist' })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const router = useRouter()
@@ -73,6 +78,9 @@ export default function Onboarding() {
       if (form.hips) fd.append('hips', form.hips)
       if (form.chest) fd.append('chest', form.chest)
       if (form.arms) fd.append('arms', form.arms)
+      if (form.thighs) fd.append('thighs', form.thighs)
+      if (form.calves) fd.append('calves', form.calves)
+      if (form.shoulders) fd.append('shoulders', form.shoulders)
       fd.append('goal', goal)
       if (age) fd.append('age', age)
       if (sex) fd.append('sex', sex)
@@ -356,7 +364,7 @@ export default function Onboarding() {
         {/* STEP 2 — Medidas */}
         {step === 2 && (
           <div className="slide-in">
-            <div style={{ marginBottom: '32px' }}>
+            <div style={{ marginBottom: '24px' }}>
               <h1 style={{ fontSize: '26px', fontWeight: 800, letterSpacing: '-0.8px', marginBottom: '8px' }}>
                 Tus medidas
               </h1>
@@ -365,33 +373,68 @@ export default function Onboarding() {
               </p>
             </div>
 
+            {/* Botón guía */}
+            <button
+              type="button"
+              onClick={() => setMeasureModal({ open: true, tab: 'waist' })}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '8px',
+                background: 'rgba(180,79,255,0.08)', border: '1px solid rgba(180,79,255,0.25)',
+                borderRadius: '10px', padding: '10px 14px', cursor: 'pointer',
+                marginBottom: '20px', width: '100%',
+                color: 'rgba(180,79,255,0.9)', fontSize: '13px', fontFamily: 'inherit',
+                fontWeight: 500,
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
+                <rect x="2" y="6" width="12" height="4" rx="1" stroke="currentColor" strokeWidth="1.3"/>
+                <line x1="5" y1="4" x2="5" y2="12" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+                <line x1="8" y1="3" x2="8" y2="13" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+                <line x1="11" y1="4" x2="11" y2="12" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+              </svg>
+              ¿Cómo medirme correctamente?
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ marginLeft: 'auto' }}>
+                <path d="M4 2l4 4-4 4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '32px' }}>
-              {MEASUREMENTS.map(f => (
-                <div key={f.key}>
-                  <label style={{
-                    fontSize: '12px',
-                    color: 'rgba(255,255,255,0.35)',
-                    fontWeight: 500,
-                    letterSpacing: '0.3px',
-                    display: 'block',
-                    marginBottom: '7px',
-                  }}>
-                    {f.label}{f.required && <span style={{ color: '#B44FFF', marginLeft: '3px' }}>*</span>}
-                  </label>
-                  <div className="input-with-unit">
-                    <input
-                      type="number"
-                      step="0.1"
-                      placeholder={f.placeholder}
-                      value={form[f.key as keyof typeof form]}
-                      onChange={e => setForm(prev => ({ ...prev, [f.key]: e.target.value }))}
-                      className="input-field"
-                      style={{ fontSize: '16px' }}
-                    />
-                    <span className="input-unit">{f.unit}</span>
+              {MEASUREMENTS.map(f => {
+                const hasMeasureGuide = ['waist','hips','chest','arms','thighs','calves','shoulders'].includes(f.key)
+                return (
+                  <div key={f.key}>
+                    <label style={{
+                      fontSize: '12px',
+                      color: 'rgba(255,255,255,0.35)',
+                      fontWeight: 500,
+                      letterSpacing: '0.3px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      marginBottom: '7px',
+                    }}>
+                      {f.label}{f.required && <span style={{ color: '#B44FFF', marginLeft: '3px' }}>*</span>}
+                      {hasMeasureGuide && (
+                        <MeasureHelpButton
+                          measureKey={f.key as 'waist'|'hips'|'chest'|'arms'|'thighs'|'calves'|'shoulders'}
+                          onClick={key => setMeasureModal({ open: true, tab: key })}
+                        />
+                      )}
+                    </label>
+                    <div className="input-with-unit">
+                      <input
+                        type="number"
+                        step="0.1"
+                        placeholder={f.placeholder}
+                        value={form[f.key as keyof typeof form]}
+                        onChange={e => setForm(prev => ({ ...prev, [f.key]: e.target.value }))}
+                        className="input-field"
+                        style={{ fontSize: '16px' }}
+                      />
+                      <span className="input-unit">{f.unit}</span>
+                    </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
@@ -646,6 +689,12 @@ export default function Onboarding() {
           </div>
         )}
       </div>
+
+      <MeasureGuideModal
+        open={measureModal.open}
+        initialTab={measureModal.tab}
+        onClose={() => setMeasureModal(m => ({ ...m, open: false }))}
+      />
     </div>
   )
 }

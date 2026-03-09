@@ -84,6 +84,9 @@ export async function analyzBodyAndGenerateDiet(params: {
   hips?: number
   chest?: number
   arms?: number
+  thighs?: number
+  calves?: number
+  shoulders?: number
   goal: string
   age?: number
   sex?: string
@@ -110,7 +113,7 @@ export async function analyzBodyAndGenerateDiet(params: {
   } | null
 }) {
   const {
-    weight, height, waist, hips, chest, arms, goal,
+    weight, height, waist, hips, chest, arms, thighs, calves, shoulders, goal,
     age, sex, activityLevel, previousCheckIn,
     frontPhotoBase64, sidePhotoBase64, frontPhotoMime, sidePhotoMime,
     freeTextContext, preferences,
@@ -162,7 +165,7 @@ Reglas estrictas:
 
 ═══ DATOS BIOMÉTRICOS ═══
 Peso: ${weight} kg | Altura: ${height} cm | IMC: ${bmi}
-${waist ? `Cintura: ${waist} cm` : ''}${hips ? ` | Caderas: ${hips} cm` : ''}${chest ? ` | Pecho: ${chest} cm` : ''}${arms ? ` | Brazos: ${arms} cm` : ''}
+${waist ? `Cintura: ${waist} cm` : ''}${hips ? ` | Caderas: ${hips} cm` : ''}${chest ? ` | Pecho: ${chest} cm` : ''}${arms ? ` | Brazos: ${arms} cm` : ''}${thighs ? ` | Muslos: ${thighs} cm` : ''}${calves ? ` | Pantorrilla: ${calves} cm` : ''}${shoulders ? ` | Hombros: ${shoulders} cm` : ''}
 Objetivo: ${goalLabels[goal] || goal}
 ${age ? `Edad: ${age} años` : ''}${sex ? ` | Sexo: ${sex === 'mujer' ? 'Mujer' : 'Hombre'}` : ''}${activityLevel ? ` | Actividad: ${activityLabels[activityLevel] || activityLevel}` : ''}
 

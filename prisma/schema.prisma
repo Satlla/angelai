@@ -29,13 +29,16 @@ model CheckIn {
   user      User     @relation(fields: [userId], references: [id])
   createdAt DateTime @default(now())
 
-  weight Float
-  height Float
-  waist  Float?
-  hips   Float?
-  chest  Float?
-  arms   Float?
-  goal   String @default("definicion")
+  weight     Float
+  height     Float
+  waist      Float?
+  hips       Float?
+  chest      Float?
+  arms       Float?
+  thighs     Float?   // muslos
+  calves     Float?   // pantorrillas
+  shoulders  Float?   // hombros
+  goal       String @default("definicion")
 
   frontPhotoUrl  String?
   sidePhotoUrl   String?

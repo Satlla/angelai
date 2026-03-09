@@ -1,6 +1,7 @@
 'use client'
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import MeasureGuideModal, { MeasureHelpButton } from '@/components/MeasureGuideModal'
 
 const MEASUREMENTS = [
   { key: 'weight', label: 'Peso', placeholder: '70', unit: 'kg', required: true },
@@ -8,6 +9,9 @@ const MEASUREMENTS = [
   { key: 'hips', label: 'Caderas', placeholder: '95', unit: 'cm' },
   { key: 'chest', label: 'Pecho', placeholder: '100', unit: 'cm' },
   { key: 'arms', label: 'Brazos', placeholder: '32', unit: 'cm' },
+  { key: 'thighs', label: 'Muslos', placeholder: '55', unit: 'cm' },
+  { key: 'calves', label: 'Pantorrilla', placeholder: '36', unit: 'cm' },
+  { key: 'shoulders', label: 'Hombros', placeholder: '110', unit: 'cm' },
 ]
 
 const GOALS = [
@@ -32,9 +36,10 @@ export default function CheckInClient({
   defaultActivityLevel: string | null
   defaultFreeTextContext?: string | null
 }) {
-  const [form, setForm] = useState({ weight: '', waist: '', hips: '', chest: '', arms: '' })
+  const [form, setForm] = useState({ weight: '', waist: '', hips: '', chest: '', arms: '', thighs: '', calves: '', shoulders: '' })
   const [goal, setGoal] = useState(defaultGoal)
   const [freeTextContext, setFreeTextContext] = useState(defaultFreeTextContext || '')
+  const [measureModal, setMeasureModal] = useState<{ open: boolean; tab: 'waist'|'hips'|'chest'|'arms'|'thighs'|'calves'|'shoulders' }>({ open: false, tab: 'waist' })
   const [frontPhoto, setFrontPhoto] = useState<File | null>(null)
   const [sidePhoto, setSidePhoto] = useState<File | null>(null)
   const [frontPreview, setFrontPreview] = useState<string | null>(null)
@@ -71,6 +76,9 @@ export default function CheckInClient({
       if (form.hips) fd.append('hips', form.hips)
       if (form.chest) fd.append('chest', form.chest)
       if (form.arms) fd.append('arms', form.arms)
+      if (form.thighs) fd.append('thighs', form.thighs)
+      if (form.calves) fd.append('calves', form.calves)
+      if (form.shoulders) fd.append('shoulders', form.shoulders)
       if (frontPhoto) fd.append('frontPhoto', frontPhoto)
       if (sidePhoto) fd.append('sidePhoto', sidePhoto)
       if (freeTextContext) fd.append('freeTextContext', freeTextContext)
@@ -144,27 +152,55 @@ export default function CheckInClient({
         <form onSubmit={handleSubmit}>
 
           {/* Medidas */}
+          <button
+            type="button"
+            onClick={() => setMeasureModal({ open: true, tab: 'waist' })}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '8px',
+              background: 'rgba(180,79,255,0.07)', border: '1px solid rgba(180,79,255,0.2)',
+              borderRadius: '10px', padding: '9px 14px', cursor: 'pointer',
+              marginBottom: '14px', width: '100%',
+              color: 'rgba(180,79,255,0.85)', fontSize: '12px', fontFamily: 'inherit', fontWeight: 500,
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+              <rect x="2" y="6" width="12" height="4" rx="1" stroke="currentColor" strokeWidth="1.3"/>
+              <line x1="5" y1="4" x2="5" y2="12" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+              <line x1="8" y1="3" x2="8" y2="13" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+              <line x1="11" y1="4" x2="11" y2="12" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+            </svg>
+            ¿Cómo medirme correctamente?
+          </button>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '28px' }}>
-            {MEASUREMENTS.map(f => (
-              <div key={f.key}>
-                <label style={{
-                  fontSize: '12px', color: 'rgba(255,255,255,0.35)', fontWeight: 500,
-                  letterSpacing: '0.3px', display: 'block', marginBottom: '7px',
-                }}>
-                  {f.label}{f.required && <span style={{ color: '#B44FFF', marginLeft: '3px' }}>*</span>}
-                </label>
-                <div className="input-with-unit">
-                  <input
-                    type="number" step="0.1" placeholder={f.placeholder}
-                    value={form[f.key as keyof typeof form]}
-                    onChange={e => setForm(p => ({ ...p, [f.key]: e.target.value }))}
-                    className="input-field" style={{ fontSize: '16px' }}
-                    required={f.required}
-                  />
-                  <span className="input-unit">{f.unit}</span>
+            {MEASUREMENTS.map(f => {
+              const hasMeasureGuide = ['waist','hips','chest','arms','thighs','calves','shoulders'].includes(f.key)
+              return (
+                <div key={f.key}>
+                  <label style={{
+                    fontSize: '12px', color: 'rgba(255,255,255,0.35)', fontWeight: 500,
+                    letterSpacing: '0.3px', display: 'flex', alignItems: 'center', marginBottom: '7px',
+                  }}>
+                    {f.label}{f.required && <span style={{ color: '#B44FFF', marginLeft: '3px' }}>*</span>}
+                    {hasMeasureGuide && (
+                      <MeasureHelpButton
+                        measureKey={f.key as 'waist'|'hips'|'chest'|'arms'|'thighs'|'calves'|'shoulders'}
+                        onClick={key => setMeasureModal({ open: true, tab: key })}
+                      />
+                    )}
+                  </label>
+                  <div className="input-with-unit">
+                    <input
+                      type="number" step="0.1" placeholder={f.placeholder}
+                      value={form[f.key as keyof typeof form]}
+                      onChange={e => setForm(p => ({ ...p, [f.key]: e.target.value }))}
+                      className="input-field" style={{ fontSize: '16px' }}
+                      required={f.required}
+                    />
+                    <span className="input-unit">{f.unit}</span>
+                  </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
 
           {/* Objetivo (puede cambiar) */}
@@ -290,6 +326,12 @@ export default function CheckInClient({
           </button>
         </form>
       </div>
+
+      <MeasureGuideModal
+        open={measureModal.open}
+        initialTab={measureModal.tab}
+        onClose={() => setMeasureModal(m => ({ ...m, open: false }))}
+      />
     </div>
   )
 }
