@@ -95,6 +95,14 @@ model UserBadge {
   @@unique([userId, badge])
 }
 
+model AnalyticsEvent {
+  id        String   @id @default(cuid())
+  userId    String?
+  event     String
+  metadata  String?
+  createdAt DateTime @default(now())
+}
+
 model DailyLog {
   id        String   @id @default(cuid())
   userId    String

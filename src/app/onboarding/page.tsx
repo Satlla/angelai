@@ -1,16 +1,16 @@
 'use client'
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import MeasureGuideModal, { MeasureHelpButton } from '@/components/MeasureGuideModal'
 
 const ANALYSIS_STEPS = [
-  { label: 'Calculando TDEE y metabolismo basal', delay: 1500 },
-  { label: 'Analizando composición corporal', delay: 4000 },
-  { label: 'Calculando macros óptimos', delay: 7000 },
-  { label: 'Diseñando plan de nutrición', delay: 11000 },
-  { label: 'Creando rutina de entrenamiento', delay: 16000 },
-  { label: 'Generando lista de la compra', delay: 21000 },
-  { label: 'Ajustando detalles personalizados', delay: 26000 },
+  { label: 'Calculando TDEE y metabolismo basal' },
+  { label: 'Analizando composición corporal' },
+  { label: 'Calculando macros óptimos' },
+  { label: 'Diseñando plan de nutrición' },
+  { label: 'Creando rutina de entrenamiento' },
+  { label: 'Generando lista de la compra' },
+  { label: 'Guardando tu plan' },
 ]
 
 const GOALS = [
@@ -42,6 +42,14 @@ const ACTIVITY_LEVELS = [
 
 const TOTAL_STEPS = 5
 
+const trackEvent = (event: string, metadata?: Record<string, unknown>) => {
+  fetch('/api/analytics', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ event, metadata }),
+  }).catch(() => {})
+}
+
 export default function Onboarding() {
   const [step, setStep] = useState(0)
   const [goal, setGoal] = useState('')
@@ -63,14 +71,6 @@ export default function Onboarding() {
   const [error, setError] = useState('')
   const [doneSteps, setDoneSteps] = useState<number[]>([])
   const router = useRouter()
-
-  useEffect(() => {
-    if (!loading) { setDoneSteps([]); return }
-    const timers = ANALYSIS_STEPS.map((s, i) =>
-      setTimeout(() => setDoneSteps(prev => [...prev, i]), s.delay)
-    )
-    return () => timers.forEach(clearTimeout)
-  }, [loading])
   const frontRef = useRef<HTMLInputElement>(null)
   const sideRef = useRef<HTMLInputElement>(null)
 
@@ -92,6 +92,12 @@ export default function Onboarding() {
     setLoading(true)
     setError('')
     setStep(5)
+
+    trackEvent('onboarding_step_4_complete', {
+      hasFreeText: freeTextContext.length > 0,
+      hasDiet: currentDiet.length > 0,
+      hasTraining: currentTraining.length > 0,
+    })
 
     try {
       const fd = new FormData()
@@ -115,12 +121,45 @@ export default function Onboarding() {
       if (currentTraining) fd.append('currentTraining', currentTraining)
 
       const res = await fetch('/api/analyze', { method: 'POST', body: fd })
-      if (!res.ok) throw new Error('Error en el análisis')
+      if (!res.ok || !res.body) {
+        throw new Error('Error en el análisis')
+      }
 
-      const data = await res.json()
-      router.push(`/plan-listo?checkInId=${data.checkInId}`)
-    } catch {
-      setError('Error al analizar. Inténtalo de nuevo.')
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+        const parts = buffer.split('\n\n')
+        buffer = parts.pop() || ''
+        for (const part of parts) {
+          if (!part.startsWith('data: ')) continue
+          try {
+            const data = JSON.parse(part.slice(6))
+            if (data.type === 'progress') {
+              setDoneSteps(prev => prev.includes(data.step) ? prev : [...prev, data.step])
+            } else if (data.type === 'done') {
+              trackEvent('onboarding_plan_generated', { checkInId: data.checkInId })
+              router.push(`/plan-listo?checkInId=${data.checkInId}`)
+              return
+            } else if (data.type === 'error') {
+              throw new Error(data.message)
+            }
+          } catch (parseErr) {
+            // Only rethrow if it's a real error (not a JSON parse error on partial data)
+            if (parseErr instanceof Error && parseErr.message !== 'Unexpected end of JSON input') {
+              throw parseErr
+            }
+          }
+        }
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Error al analizar. Inténtalo de nuevo.'
+      trackEvent('onboarding_error', { step: 4, message })
+      setError(message)
       setLoading(false)
       setStep(4)
     }
@@ -233,7 +272,10 @@ export default function Onboarding() {
                 className="btn-primary"
                 style={{ width: '100%', padding: '16px' }}
                 disabled={!goal}
-                onClick={() => setStep(1)}
+                onClick={() => {
+                  trackEvent('onboarding_step_0_complete', { goal })
+                  setStep(1)
+                }}
               >
                 Continuar
               </button>
@@ -378,7 +420,10 @@ export default function Onboarding() {
                 className="btn-primary"
                 style={{ flex: 1, padding: '16px' }}
                 disabled={!age || !sex || !activityLevel}
-                onClick={() => setStep(2)}
+                onClick={() => {
+                  trackEvent('onboarding_step_1_complete', { age, sex, activityLevel })
+                  setStep(2)
+                }}
               >
                 Continuar
               </button>
@@ -470,7 +515,11 @@ export default function Onboarding() {
                 className="btn-primary"
                 style={{ flex: 1, padding: '16px' }}
                 disabled={!form.weight || !form.height}
-                onClick={() => setStep(3)}
+                onClick={() => {
+                  const filledCount = Object.values(form).filter(v => v !== '').length
+                  trackEvent('onboarding_step_2_complete', { filledMeasurements: filledCount })
+                  setStep(3)
+                }}
               >
                 Continuar
               </button>
@@ -611,7 +660,10 @@ export default function Onboarding() {
               <button
                 className="btn-primary"
                 style={{ flex: 1, padding: '16px' }}
-                onClick={() => setStep(4)}
+                onClick={() => {
+                  trackEvent('onboarding_step_3_complete', { hasFront: !!frontPhoto, hasSide: !!sidePhoto })
+                  setStep(4)
+                }}
               >
                 Continuar
               </button>
