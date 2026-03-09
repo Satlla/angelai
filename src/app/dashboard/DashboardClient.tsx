@@ -1145,151 +1145,114 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
             {!dietData?.shoppingList?.length ? (
               <div style={{
                 background: '#0C0D16', border: '1px solid rgba(255,255,255,0.06)',
-                borderRadius: '16px', padding: '32px 20px', textAlign: 'center',
+                borderRadius: '16px', padding: '40px 20px', textAlign: 'center',
               }}>
+                <svg width="36" height="36" viewBox="0 0 36 36" fill="none" style={{ margin: '0 auto 16px', display: 'block' }}>
+                  <rect x="6" y="10" width="24" height="20" rx="3" stroke="rgba(255,255,255,0.15)" strokeWidth="1.5"/>
+                  <path d="M13 10V8a5 5 0 0 1 10 0v2" stroke="rgba(255,255,255,0.15)" strokeWidth="1.5" strokeLinecap="round"/>
+                  <path d="M13 18h10M13 23h6" stroke="rgba(255,255,255,0.15)" strokeWidth="1.5" strokeLinecap="round"/>
+                </svg>
                 <p style={{ fontSize: '15px', fontWeight: 600, marginBottom: '8px' }}>Lista no disponible</p>
                 <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.35)', lineHeight: 1.6 }}>
-                  Haz un nuevo check-in para generar tu lista de la compra semanal automáticamente.
+                  Haz un nuevo check-in para generar tu lista de la compra semanal.
                 </p>
               </div>
-            ) : (
-              <>
-                {/* Cheat day info */}
-                {dietData.cheatDay && (
+            ) : (() => {
+              const categories: Record<string, ShoppingItem[]> = {}
+              ;(dietData.shoppingList as ShoppingItem[]).forEach(item => {
+                const cat = item.category || 'Otro'
+                if (!categories[cat]) categories[cat] = []
+                categories[cat].push(item)
+              })
+              const totalItems = (dietData.shoppingList as ShoppingItem[]).length
+              const checkedCount = (dietData.shoppingList as ShoppingItem[]).filter(i => checkedItems[i.item]).length
+
+              return (
+                <>
+                  {/* Header row */}
                   <div style={{
-                    background: 'rgba(255,215,0,0.06)', border: '1px solid rgba(255,215,0,0.2)',
-                    borderRadius: '14px', padding: '14px 18px',
-                    display: 'flex', alignItems: 'center', gap: '12px',
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '4px 2px',
                   }}>
-                    <span style={{ fontSize: '20px' }}>🎉</span>
-                    <div>
-                      <p style={{ fontSize: '12px', color: 'rgba(255,215,0,0.7)', fontWeight: 600, marginBottom: '2px' }}>
-                        DÍA DE TRAMPA
-                      </p>
-                      <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.7)' }}>{dietData.cheatDay}</p>
-                    </div>
+                    <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.4)' }}>
+                      {checkedCount} de {totalItems} productos
+                    </span>
+                    <button
+                      onClick={clearShoppingList}
+                      style={{
+                        fontSize: '12px', color: 'rgba(255,255,255,0.3)', background: 'none',
+                        border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px',
+                        padding: '5px 10px', cursor: 'pointer', fontFamily: 'inherit',
+                      }}
+                    >
+                      Limpiar
+                    </button>
                   </div>
-                )}
 
-                {/* Shopping list grouped by category */}
-                {(() => {
-                  const categories: Record<string, ShoppingItem[]> = {}
-                  ;(dietData.shoppingList as ShoppingItem[]).forEach(item => {
-                    const cat = item.category || 'Otro'
-                    if (!categories[cat]) categories[cat] = []
-                    categories[cat].push(item)
-                  })
-                  const totalItems = (dietData.shoppingList as ShoppingItem[]).length
-                  const checkedCount = (dietData.shoppingList as ShoppingItem[]).filter(i => checkedItems[i.item]).length
-                  return (
-                    <>
-                      {/* Progress bar */}
-                      <div style={{
-                        background: '#0C0D16', border: '1px solid rgba(255,255,255,0.06)',
-                        borderRadius: '14px', padding: '16px 18px',
-                        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px',
-                      }}>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                            <span style={{ fontSize: '13px', fontWeight: 600, color: 'rgba(255,255,255,0.75)' }}>
-                              {checkedCount}/{totalItems} productos
-                            </span>
-                            <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.3)' }}>
-                              {Math.round((checkedCount / totalItems) * 100)}% completado
-                            </span>
-                          </div>
-                          <div style={{ height: '4px', background: 'rgba(255,255,255,0.07)', borderRadius: '2px', overflow: 'hidden' }}>
+                  {/* Categories with checkboxes */}
+                  {Object.entries(categories).map(([cat, items]) => (
+                    <div key={cat} style={{
+                      background: '#0C0D16', border: '1px solid rgba(255,255,255,0.06)',
+                      borderRadius: '16px', overflow: 'hidden',
+                    }}>
+                      <p style={{
+                        fontSize: '10px', letterSpacing: '1.5px', fontWeight: 700,
+                        textTransform: 'uppercase', color: 'rgba(255,255,255,0.25)',
+                        padding: '14px 18px 0', marginBottom: '8px',
+                      }}>{cat}</p>
+                      {items.map((item, i) => {
+                        const checked = !!checkedItems[item.item]
+                        return (
+                          <div
+                            key={item.item}
+                            onClick={() => toggleShoppingItem(item.item)}
+                            style={{
+                              display: 'flex', alignItems: 'center', gap: '14px',
+                              padding: '13px 18px',
+                              borderTop: '1px solid rgba(255,255,255,0.04)',
+                              cursor: 'pointer',
+                              transition: 'background 0.1s ease',
+                            }}
+                          >
                             <div style={{
-                              height: '100%', background: 'linear-gradient(90deg, #B44FFF, #00D9F5)',
-                              borderRadius: '2px', width: `${(checkedCount / totalItems) * 100}%`,
-                              transition: 'width 0.3s ease',
-                            }} />
+                              width: '22px', height: '22px', borderRadius: '6px', flexShrink: 0,
+                              border: checked ? 'none' : '1.5px solid rgba(255,255,255,0.18)',
+                              background: checked ? '#B44FFF' : 'transparent',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              transition: 'all 0.15s ease',
+                            }}>
+                              {checked && (
+                                <svg width="11" height="9" viewBox="0 0 10 8" fill="none">
+                                  <path d="M1 3.5L3.8 6.5L9 1" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                                </svg>
+                              )}
+                            </div>
+                            <span style={{
+                              flex: 1, fontSize: '14px', lineHeight: 1.4,
+                              color: checked ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.82)',
+                              textDecoration: checked ? 'line-through' : 'none',
+                              transition: 'all 0.15s ease',
+                            }}>
+                              {item.item}
+                            </span>
+                            <span style={{
+                              fontSize: '12px', fontWeight: 600,
+                              color: checked ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.35)',
+                              background: 'rgba(255,255,255,0.05)',
+                              padding: '3px 8px', borderRadius: '6px', whiteSpace: 'nowrap' as const,
+                            }}>
+                              {item.weeklyGrams >= 1000
+                                ? `${(item.weeklyGrams / 1000).toFixed(1)} kg`
+                                : `${item.weeklyGrams} g`}
+                            </span>
                           </div>
-                        </div>
-                        <button
-                          onClick={clearShoppingList}
-                          style={{
-                            fontSize: '12px', color: 'rgba(255,255,255,0.3)', background: 'none',
-                            border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px',
-                            padding: '6px 10px', cursor: 'pointer', fontFamily: 'inherit',
-                            whiteSpace: 'nowrap' as const,
-                          }}
-                        >
-                          Limpiar
-                        </button>
-                      </div>
-
-                      {Object.entries(categories).map(([cat, items]) => (
-                        <div key={cat} style={{
-                          background: '#0C0D16', border: '1px solid rgba(255,255,255,0.06)',
-                          borderRadius: '16px', overflow: 'hidden',
-                        }}>
-                          <div style={{ padding: '14px 18px 0' }}>
-                            <p style={{
-                              fontSize: '10px', letterSpacing: '1.5px', fontWeight: 700,
-                              textTransform: 'uppercase', color: 'rgba(255,255,255,0.28)', marginBottom: '10px',
-                            }}>{cat}</p>
-                          </div>
-                          {items.map((item, i) => {
-                            const checked = !!checkedItems[item.item]
-                            return (
-                              <div
-                                key={item.item}
-                                onClick={() => toggleShoppingItem(item.item)}
-                                style={{
-                                  display: 'flex', alignItems: 'center', gap: '14px',
-                                  padding: '12px 18px',
-                                  borderTop: i === 0 ? '1px solid rgba(255,255,255,0.05)' : 'none',
-                                  borderBottom: i < items.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none',
-                                  cursor: 'pointer',
-                                  opacity: checked ? 0.45 : 1,
-                                  transition: 'opacity 0.15s ease',
-                                }}
-                              >
-                                {/* Checkbox */}
-                                <div style={{
-                                  width: '20px', height: '20px', borderRadius: '6px', flexShrink: 0,
-                                  border: checked ? 'none' : '1.5px solid rgba(255,255,255,0.2)',
-                                  background: checked ? '#B44FFF' : 'transparent',
-                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                  transition: 'all 0.15s ease',
-                                }}>
-                                  {checked && (
-                                    <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-                                      <path d="M1 3.5L3.8 6.5L9 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                                    </svg>
-                                  )}
-                                </div>
-                                <div style={{ flex: 1 }}>
-                                  <p style={{
-                                    fontSize: '14px', color: 'rgba(255,255,255,0.8)',
-                                    textDecoration: checked ? 'line-through' : 'none',
-                                    transition: 'all 0.15s ease',
-                                  }}>
-                                    {item.item}
-                                  </p>
-                                </div>
-                                <span style={{
-                                  fontSize: '12px', fontWeight: 600,
-                                  color: 'rgba(255,255,255,0.35)',
-                                  background: 'rgba(255,255,255,0.06)',
-                                  padding: '3px 8px', borderRadius: '6px',
-                                  whiteSpace: 'nowrap' as const,
-                                }}>
-                                  {item.weeklyGrams >= 1000
-                                    ? `${(item.weeklyGrams / 1000).toFixed(1)} kg`
-                                    : `${item.weeklyGrams} g`}
-                                </span>
-                              </div>
-                            )
-                          })}
-                        </div>
-                      ))}
-                    </>
-                  )
-                })()}
-              </>
-            )}
+                        )
+                      })}
+                    </div>
+                  ))}
+                </>
+              )
+            })()}
           </div>
         )}
 
