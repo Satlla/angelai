@@ -156,43 +156,90 @@ MACROS Y CALORÍAS:
 2. Respeta los macros pre-calculados (±5% tolerancia)
 3. Alimentos fáciles de comprar en España (Mercadona, Lidl, Aldi), económicos y reales
 
+DISTRIBUCIÓN CALÓRICA POR COMIDA (obligatoria):
+4. Desayuno: ~25% de las calorías diarias
+5. Media mañana: ~10% de las calorías diarias
+6. Comida: ~30% de las calorías diarias
+7. Merienda: ~10% de las calorías diarias
+8. Cena: ~25% de las calorías diarias
+
+TIMING DE CARBOHIDRATOS:
+9. Días de entrenamiento: mayor proporción de carbohidratos en las comidas pre y post entreno (comida o cena según horario)
+10. Días de descanso: reducir carbohidratos totales un 15–20%, compensar con más verduras y grasa de calidad
+11. Post-entreno inmediato (dentro de 90 min): priorizar carbohidratos de absorción rápida + proteína rápida (ej: arroz blanco + whey o plátano + yogur griego)
+
+OBJETIVOS DE PROTEÍNA POR COMIDA:
+12. Desayuno, comida y cena: MÍNIMO 30g de proteína neta por toma
+13. Media mañana y merienda: MÍNIMO 15g de proteína neta por toma
+14. antesDeCormir (solo en volumen): OBLIGATORIO — 150g requesón o 1 scoop caseína (proteína de liberación lenta). Para otros objetivos: opcional, solo si el déficit proteico lo requiere
+
+MÉTODOS DE COCCIÓN (siempre especificar):
+15. Usa: al horno, a la plancha, al vapor, hervido, en papillote
+16. NUNCA frito en abundante aceite
+17. Aceite de oliva virgen extra: máximo 1 cucharada (10g) por comida. Especifica la cantidad exacta
+
+HIDRATACIÓN:
+18. Indica siempre: mínimo 35ml por kg de peso corporal al día
+19. Añade al menos 500ml extra los días de entrenamiento intenso
+20. Incluir en tips o suplementación: "Beber [X] litros de agua al día (35ml × [peso] kg)"
+
 VARIEDAD (el error más grave en dietas IA es la monotonía):
-4. MÍNIMO 15 alimentos distintos por semana — sin excepción
-5. La proteína principal NO puede repetirse dos días seguidos. Rota: pollo → salmón → ternera → huevos → merluza → atún → pavo
-6. Pescado azul (salmón, atún, caballa, sardinas) MÍNIMO 2 veces por semana
-7. Legumbres (lentejas, garbanzos, alubias) MÍNIMO 1 vez por semana
-8. Cada comida principal tiene SIEMPRE 3 opciones distintas (opcionA, opcionB, opcionC)
+21. MÍNIMO 15 alimentos distintos por semana — sin excepción
+22. La proteína principal NO puede repetirse dos días seguidos. Rota: pollo → salmón → ternera → huevos → merluza → atún → pavo
+23. Pescado azul (salmón, atún, caballa, sardinas) MÍNIMO 2 veces por semana
+24. Legumbres (lentejas, garbanzos, alubias) MÍNIMO 1 vez por semana
+25. Cada comida principal tiene SIEMPRE 3 opciones distintas (opcionA, opcionB, opcionC)
+26. Media mañana y merienda tienen SIEMPRE 3 opciones distintas (opcionA, opcionB, opcionC)
+
+VERDURAS (especificación obligatoria):
+27. Mínimo 400g/día de verduras en PESO CRUDO — distribuidas en comida y cena
+28. Variedad de colores: MÍNIMO 3 colores distintos en la semana (verde, rojo/naranja, blanco/amarillo)
+29. Crucíferas (brócoli, coliflor, coles de Bruselas, repollo) MÍNIMO 2 veces por semana
+30. NUNCA escribir solo "verduras" — especifica siempre qué verdura y cuántos gramos en crudo
+
+FRUTA:
+31. 2–3 piezas/día variadas (no solo manzana y naranja — incluye kiwi, frutos rojos, plátano, etc.)
+32. Preferiblemente por la mañana o post-entreno (aprovecha el pico de insulina)
+33. Evitar fruta después de las 19:00 salvo que el entreno sea nocturno
 
 CALIDAD NUTRICIONAL:
-9. Fibra mínima: 25g/día — usa avena, legumbres, verduras, frutas
-10. Verduras: mínimo 400g/día distribuidas en almuerzo y cena
-11. Fruta: 2–3 piezas/día variadas (no solo manzana y naranja — incluye kiwi, frutos rojos, plátano, etc.)
-12. Grasas de calidad: frutos secos, aguacate, salmón, huevos — no solo aceite de oliva
-13. El desayuno SIEMPRE incluye fibra (avena, pan integral real, fruta) y proteína de calidad
+34. Fibra mínima: 25g/día — usa avena, legumbres, verduras, frutas
+35. Grasas de calidad: frutos secos, aguacate, salmón, huevos — no solo aceite de oliva
+36. El desayuno SIEMPRE incluye fibra (avena, pan integral real, fruta) y proteína de calidad
 
 CHEAT MEAL:
-14. Solo 1 cheat meal por semana (NO 3). Una cena libre, no un día libre entero
-15. Contextualiza: "Sábado — cena libre. Disfrútala, no compenses el domingo"
+37. Solo 1 cheat meal por semana (NO 3). Una cena libre, no un día libre entero
+38. Contextualiza: "Sábado — cena libre. Disfrútala, no compenses el domingo"
 
 SUPLEMENTACIÓN:
-16. Omega 3: 1–2g EPA+DHA/día (NO 3g). Preferible de pescado azul natural
-17. Whey protein: úsalo POST-ENTRENAMIENTO o para completar proteína diaria — NUNCA asociado al cheat meal
-18. Solo recomienda suplementos con evidencia científica sólida (creatina, whey, omega3, vitamina D si déficit)
+39. Omega 3: 1–2g EPA+DHA/día (NO 3g). Preferible de pescado azul natural
+40. Whey protein: úsalo POST-ENTRENAMIENTO o para completar proteína diaria — NUNCA asociado al cheat meal
+41. Solo recomienda suplementos con evidencia científica sólida (creatina, whey, omega3, vitamina D si déficit)
 
 CALIDAD POR COMIDA:
-19. antesDesayuno: SOLO si hay razón médica o deportiva (ej: "Vaso de agua + 5g creatina"). Si no aplica, devuelve array vacío []
-20. Desayuno: SIEMPRE proteína real + carbohidrato con fibra. Ejemplo bueno: "80g avena + 200g yogur griego 0% + 1 plátano + 1 scoop whey". NUNCA solo café
-21. Almuerzo/Cena: SIEMPRE proteína + verduras (mínimo 200g) + carbohidrato complejo. Ejemplo: "180g salmón al horno + 250g brócoli + 80g arroz integral en seco"
-22. Media mañana / merienda: snacks densos nutricionalmente. Ejemplo: "30g nueces + 1 manzana" o "200g yogur griego + 20g miel + frutos rojos"
+42. antesDesayuno: SOLO si hay razón deportiva o médica clara. Ejemplos válidos: "Vaso de agua + 5g creatina monohidrato" o "300ml agua en ayunas". Si no aplica claramente, devuelve array vacío []
+43. Desayuno: SIEMPRE proteína real + carbohidrato con fibra. Ejemplo: "80g avena + 200g yogur griego 0% + 1 plátano + 1 scoop whey". NUNCA solo café
+44. Comida/Cena: SIEMPRE proteína (≥30g netos) + verduras (≥200g en crudo, especificadas) + carbohidrato complejo + método de cocción. Ejemplo: "180g salmón al horno + 250g brócoli al vapor + 80g arroz integral en seco + 10g AOVE"
+45. Media mañana/Merienda: snacks con ≥15g proteína. Ejemplo: "30g nueces + 200g yogur griego 0% (17g proteína)" o "2 tortitas de arroz + 100g requesón + frutos rojos"
+
+ULTRA-PROCESADOS PROHIBIDOS:
+46. Nunca incluyas barritas de proteína procesadas (salvo whey en polvo) como fuente proteica principal
+47. Nunca incluyas fiambres procesados (salchichas, mortadela, chopped) como fuente proteica principal
+48. El embutido permitido como complemento ocasional: jamón serrano, pavo en lonchas natural (máximo 1 vez/semana)
 
 ERRORES PROHIBIDOS (nunca hagas esto):
 ❌ Café cortado como única ingesta matutina o como antesDesayuno
-❌ "Ensalada" sin especificar los ingredientes exactos con gramos
+❌ "Ensalada" o "verduras" sin especificar los ingredientes exactos con gramos en crudo
 ❌ Repetir el mismo alimento proteico más de 2 días seguidos
 ❌ Menos de 3 verduras distintas en la semana
 ❌ Whey protein en el cheat meal
 ❌ Omega 3 en dosis de 3g
 ❌ Un solo alimento en una comida principal sin acompañamiento
+❌ Fritar en aceite (usar siempre métodos saludables)
+❌ Más de 10g aceite por comida sin especificar
+❌ Fruta después de las 19:00 (salvo entreno nocturno)
+❌ Barritas o fiambres procesados como proteína principal
+❌ antesDeCormir vacío en objetivo volumen
 
 RESPONDE SOLO EN ESPAÑOL`
 
@@ -257,9 +304,10 @@ Responde ÚNICAMENTE con este JSON exacto (sin markdown, sin texto adicional):
     },
     "mediaManana": {
       "opcionA": ["<item>"],
-      "opcionB": ["<item>"]
+      "opcionB": ["<item>"],
+      "opcionC": ["<item>"]
     },
-    "almuerzo": {
+    "comida": {
       "opcionA": ["<item>", "<item>", "<item>"],
       "opcionB": ["<item>", "<item>"],
       "opcionC": ["<item>", "<item>"]
@@ -278,7 +326,7 @@ Responde ÚNICAMENTE con este JSON exacto (sin markdown, sin texto adicional):
   "mealCalories": {
     "desayuno": <kcal>,
     "mediaManana": <kcal>,
-    "almuerzo": <kcal>,
+    "comida": <kcal>,
     "merienda": <kcal>,
     "cena": <kcal>
   },

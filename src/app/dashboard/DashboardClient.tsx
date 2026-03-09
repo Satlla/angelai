@@ -175,179 +175,371 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
       const { default: jsPDF } = await import('jspdf')
       const doc = new jsPDF({ unit: 'mm', format: 'a4' })
       const pageW = doc.internal.pageSize.getWidth()
+      const checkInData = checkIns[0]
       let y = 0
 
-      // ── Header band ──
-      doc.setFillColor(17, 18, 32)
-      doc.rect(0, 0, pageW, 297, 'F')
-
-      doc.setFillColor(180, 79, 255)
-      doc.rect(0, 0, pageW, 44, 'F')
-
-      doc.setFont('helvetica', 'bold')
-      doc.setFontSize(20)
-      doc.setTextColor(255, 255, 255)
-      doc.text('ANGEL', 20, 22)
-      doc.setTextColor(0, 217, 245)
-      doc.text('AI', 20 + doc.getTextWidth('ANGEL'), 22)
-
-      doc.setFont('helvetica', 'normal')
-      doc.setFontSize(9)
-      doc.setTextColor(180, 180, 200)
-      doc.text('Plan de Nutrición Personalizado', 20, 31)
-      doc.setTextColor(255, 255, 255)
-      doc.text(
-        new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' }),
-        pageW - 20, 31, { align: 'right' }
-      )
-
-      y = 60
-
-      // ── Stats row ──
-      const stats = [
-        { label: 'PESO', value: `${latest.weight} kg` },
-        { label: 'BODY SCORE', value: `${score}` },
-        { label: 'RANGO', value: rank },
-      ]
-      stats.forEach((s, i) => {
-        const x = 20 + i * 60
-        doc.setFont('helvetica', 'bold')
-        doc.setFontSize(8)
-        doc.setTextColor(130, 130, 150)
-        doc.text(s.label, x, y)
-        doc.setFontSize(16)
-        doc.setTextColor(i === 2 ? 180 : 255, i === 2 ? 79 : 255, i === 2 ? 255 : 255)
-        doc.text(s.value, x, y + 9)
-      })
-
-      y += 24
-
-      // Separator
-      doc.setDrawColor(40, 42, 65)
-      doc.setLineWidth(0.3)
-      doc.line(20, y, pageW - 20, y)
-      y += 10
-
-      // ── Section helper ──
-      const sectionTitle = (title: string) => {
-        doc.setFillColor(25, 26, 45)
-        doc.roundedRect(20, y, pageW - 40, 8, 2, 2, 'F')
-        doc.setFont('helvetica', 'bold')
-        doc.setFontSize(8)
-        doc.setTextColor(180, 79, 255)
-        doc.text(title, 26, y + 5.5)
-        y += 14
+      // ── Helper: check page break ──
+      const checkPage = (needed = 12) => {
+        if (y > 260 - needed) { doc.addPage(); y = 20 }
       }
 
-      const addItem = (text: string, accent = false) => {
-        if (y > 268) { doc.addPage(); addBg(); y = 20 }
+      // ── Helper: section heading ──
+      const sectionTitle = (title: string) => {
+        checkPage(16)
+        doc.setFont('helvetica', 'bold')
+        doc.setFontSize(10)
+        doc.setTextColor(123, 63, 228)
+        doc.text(title, 20, y)
+        y += 1
+        doc.setDrawColor(123, 63, 228)
+        doc.setLineWidth(0.4)
+        doc.line(20, y + 1, pageW - 20, y + 1)
+        y += 6
+      }
+
+      // ── Helper: body text ──
+      const bodyText = (text: string, indent = 20, size = 9) => {
+        checkPage()
+        doc.setFont('helvetica', 'normal')
+        doc.setFontSize(size)
+        doc.setTextColor(40, 40, 40)
+        const lines = doc.splitTextToSize(text, pageW - 40)
+        doc.text(lines, indent, y)
+        y += (lines as string[]).length * (size * 0.42) + 2
+      }
+
+      // ── Helper: bullet item ──
+      const bulletItem = (text: string, indent = 24) => {
+        checkPage()
         doc.setFont('helvetica', 'normal')
         doc.setFontSize(9)
-        doc.setTextColor(accent ? 0 : 200, accent ? 217 : 200, accent ? 245 : 215)
-        const lines = doc.splitTextToSize(`• ${text}`, pageW - 55)
-        doc.text(lines, 26, y)
-        y += (lines as string[]).length * 5 + 2
+        doc.setTextColor(40, 40, 40)
+        const lines = doc.splitTextToSize(`• ${text}`, pageW - 40 - (indent - 20))
+        doc.text(lines, indent, y)
+        y += (lines as string[]).length * 4.5 + 1.5
       }
 
-      const addBg = () => {
-        doc.setFillColor(17, 18, 32)
-        doc.rect(0, 0, pageW, 297, 'F')
+      // ── Helper: sub-label ──
+      const subLabel = (text: string) => {
+        checkPage()
+        doc.setFont('helvetica', 'italic')
+        doc.setFontSize(8)
+        doc.setTextColor(100, 100, 120)
+        doc.text(text, 26, y)
+        y += 5
       }
 
-      // ── Macros ──
-      sectionTitle('MACROS DIARIOS')
-      const macros = [
-        { label: 'Calorías', value: `${dietData.calories} kcal` },
-        { label: 'Proteína', value: `${dietData.protein}g` },
-        { label: 'Carbohidratos', value: `${dietData.carbs}g` },
-        { label: 'Grasas', value: `${dietData.fat}g` },
+      // ═══════════════════════════════════════════
+      // HEADER (purple gradient bar, 40mm)
+      // ═══════════════════════════════════════════
+      doc.setFillColor(123, 63, 228)
+      doc.rect(0, 0, pageW, 40, 'F')
+
+      // Logo
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(22)
+      doc.setTextColor(255, 255, 255)
+      doc.text('ANGEL', 20, 20)
+      const angelW = doc.getTextWidth('ANGEL')
+      doc.setTextColor(200, 240, 255)
+      doc.text('AI', 20 + angelW, 20)
+
+      // Subtitle
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(9)
+      doc.setTextColor(220, 200, 255)
+      doc.text('Plan de Nutrición Personalizado', 20, 29)
+
+      // Date (right-aligned)
+      doc.setTextColor(255, 255, 255)
+      doc.setFontSize(8)
+      doc.text(
+        new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' }),
+        pageW - 20, 29, { align: 'right' }
+      )
+
+      y = 50
+
+      // ═══════════════════════════════════════════
+      // PROFILE ROW
+      // ═══════════════════════════════════════════
+      const profileItems = [
+        { label: 'Peso', value: `${checkInData.weight} kg` },
+        { label: 'Body Score', value: `${score}` },
+        { label: 'Rango', value: rank },
       ]
-      macros.forEach((m, i) => {
+      profileItems.forEach((item, i) => {
+        const x = 20 + i * 58
+        doc.setFont('helvetica', 'normal')
+        doc.setFontSize(7.5)
+        doc.setTextColor(120, 120, 140)
+        doc.text(item.label.toUpperCase(), x, y)
+        doc.setFont('helvetica', 'bold')
+        doc.setFontSize(14)
+        doc.setTextColor(30, 30, 30)
+        doc.text(item.value, x, y + 8)
+      })
+      y += 18
+
+      // Divider
+      doc.setDrawColor(220, 220, 230)
+      doc.setLineWidth(0.3)
+      doc.line(20, y, pageW - 20, y)
+      y += 8
+
+      // ═══════════════════════════════════════════
+      // ANALYSIS
+      // ═══════════════════════════════════════════
+      if (dietData.analysis) {
+        sectionTitle('VALORACIÓN PERSONALIZADA')
+        bodyText(dietData.analysis)
+        y += 4
+      }
+
+      // ═══════════════════════════════════════════
+      // MACROS BOX (2-column grid)
+      // ═══════════════════════════════════════════
+      checkPage(40)
+      sectionTitle('MACROS DIARIOS')
+      const macroItems = [
+        { label: 'Calorías', value: `${dietData.calories} kcal` },
+        { label: 'Proteína', value: `${dietData.protein} g` },
+        { label: 'Carbohidratos', value: `${dietData.carbs} g` },
+        { label: 'Grasas', value: `${dietData.fat} g` },
+        { label: 'TDEE', value: dietData.tdee ? `${dietData.tdee} kcal` : '—' },
+      ]
+      const colW = (pageW - 40) / 2
+      macroItems.forEach((m, i) => {
         const col = i % 2
         const row = Math.floor(i / 2)
-        const mx = 26 + col * 85
-        const my = y + row * 16
+        const mx = 20 + col * colW
+        const my = y + row * 14
         doc.setFont('helvetica', 'normal')
-        doc.setFontSize(8)
-        doc.setTextColor(130, 130, 150)
+        doc.setFontSize(7.5)
+        doc.setTextColor(120, 120, 140)
         doc.text(m.label, mx, my)
         doc.setFont('helvetica', 'bold')
-        doc.setFontSize(13)
-        doc.setTextColor(255, 255, 255)
-        doc.text(m.value, mx, my + 8)
+        doc.setFontSize(12)
+        doc.setTextColor(30, 30, 30)
+        doc.text(m.value, mx, my + 7)
       })
-      y += 36
+      y += Math.ceil(macroItems.length / 2) * 14 + 6
 
-      doc.setDrawColor(40, 42, 65)
+      doc.setDrawColor(220, 220, 230)
+      doc.setLineWidth(0.3)
       doc.line(20, y, pageW - 20, y)
-      y += 10
+      y += 8
 
-      // ── Diet plan ──
+      // ═══════════════════════════════════════════
+      // MEAL PLAN
+      // ═══════════════════════════════════════════
       if (dietData.diet) {
+        checkPage(20)
         sectionTitle('PLAN DE NUTRICIÓN')
-        const meals = [
+
+        const mealCalories: Record<string, number> = dietData.mealCalories || {}
+
+        const meals: { key: string; title: string; simple?: boolean }[] = [
           { key: 'antesDesayuno', title: 'Antes del Desayuno', simple: true },
           { key: 'desayuno', title: 'Desayuno' },
-          { key: 'almuerzo', title: 'Almuerzo' },
+          { key: 'mediaManana', title: 'Media Mañana' },
           { key: 'comida', title: 'Comida' },
           { key: 'merienda', title: 'Merienda' },
           { key: 'cena', title: 'Cena' },
+          { key: 'antesDeCormir', title: 'Antes de Dormir', simple: true },
         ]
+
         meals.forEach(meal => {
-          const data = dietData.diet[meal.key]
+          // For antesDesayuno: get from diet; for comida check both keys
+          let data = meal.key === 'comida'
+            ? (dietData.diet.comida || dietData.diet.almuerzo)
+            : dietData.diet[meal.key]
+
           if (!data) return
-          if (y > 255) { doc.addPage(); addBg(); y = 20 }
+
+          // Skip empty arrays (antesDesayuno / antesDeCormir)
+          if (Array.isArray(data) && data.length === 0) return
+
+          checkPage(20)
+
+          // Meal heading
           doc.setFont('helvetica', 'bold')
           doc.setFontSize(10)
-          doc.setTextColor(0, 217, 245)
-          doc.text(meal.title, 20, y)
+          doc.setTextColor(60, 60, 80)
+          const kcalStr = mealCalories[meal.key] ? `  — ${mealCalories[meal.key]} kcal` : ''
+          doc.text(`${meal.title}${kcalStr}`, 20, y)
           y += 6
-          const items: string[] = meal.simple
-            ? (Array.isArray(data) ? data : [])
-            : (data.opcionA || [])
-          items.forEach(item => addItem(item))
+
+          if (meal.simple) {
+            // Simple array (antesDesayuno / antesDeCormir)
+            const items: string[] = Array.isArray(data) ? data : []
+            items.forEach(item => bulletItem(item))
+          } else {
+            // opcionA (main)
+            const opA: string[] = data.opcionA || []
+            opA.forEach(item => bulletItem(item))
+
+            // opcionB
+            if (data.opcionB?.length) {
+              subLabel('Alternativa B:')
+              const opB: string[] = data.opcionB
+              opB.forEach(item => bulletItem(item, 28))
+            }
+
+            // opcionC
+            if (data.opcionC?.length) {
+              subLabel('Alternativa C:')
+              const opC: string[] = data.opcionC
+              opC.forEach(item => bulletItem(item, 28))
+            }
+          }
+
+          y += 4
+        })
+      }
+
+      // ═══════════════════════════════════════════
+      // TRAINING
+      // ═══════════════════════════════════════════
+      if (dietData.training) {
+        checkPage(20)
+        doc.setDrawColor(220, 220, 230)
+        doc.setLineWidth(0.3)
+        doc.line(20, y, pageW - 20, y)
+        y += 8
+        sectionTitle('PLAN DE ENTRENAMIENTO')
+
+        doc.setFont('helvetica', 'normal')
+        doc.setFontSize(9)
+        doc.setTextColor(60, 60, 80)
+        const trainingMeta = `${dietData.training.tipo || ''}${dietData.training.dias ? ` · ${dietData.training.dias} días/semana` : ''}`
+        if (trainingMeta.trim()) {
+          bodyText(trainingMeta)
+          y += 2
+        }
+
+        const rutina: { dia: string; nombre?: string; ejercicios?: { nombre: string; series: number; reps: string; descanso: string }[] }[] = dietData.training.rutina || []
+        rutina.forEach(day => {
+          checkPage(20)
+          doc.setFont('helvetica', 'bold')
+          doc.setFontSize(9)
+          doc.setTextColor(123, 63, 228)
+          doc.text(`${day.dia}${day.nombre ? ` — ${day.nombre}` : ''}`, 20, y)
+          y += 5
+          const ejercicios = day.ejercicios || []
+          ejercicios.forEach(ex => {
+            checkPage()
+            doc.setFont('helvetica', 'normal')
+            doc.setFontSize(8.5)
+            doc.setTextColor(40, 40, 40)
+            const exLine = `• ${ex.nombre}  ${ex.series}×${ex.reps}  (descanso ${ex.descanso})`
+            const lines = doc.splitTextToSize(exLine, pageW - 44)
+            doc.text(lines, 24, y)
+            y += (lines as string[]).length * 4.5 + 1
+          })
           y += 3
         })
       }
 
-      // ── Supplements ──
+      // ═══════════════════════════════════════════
+      // SUPPLEMENTS
+      // ═══════════════════════════════════════════
       if (dietData.supplements?.length > 0) {
-        if (y > 240) { doc.addPage(); addBg(); y = 20 }
-        doc.setDrawColor(40, 42, 65)
+        checkPage(20)
+        doc.setDrawColor(220, 220, 230)
+        doc.setLineWidth(0.3)
         doc.line(20, y, pageW - 20, y)
-        y += 10
+        y += 8
         sectionTitle('SUPLEMENTACIÓN')
-        dietData.supplements.forEach((s: string) => addItem(s, true))
+        dietData.supplements.forEach((s: string) => bulletItem(s))
         y += 4
       }
 
-      // ── Tips ──
+      // ═══════════════════════════════════════════
+      // WEEKLY VARIETY NOTES
+      // ═══════════════════════════════════════════
+      if (dietData.dietVarietyNotes) {
+        checkPage(20)
+        sectionTitle('ROTACIÓN DE PROTEÍNAS')
+        bodyText(dietData.dietVarietyNotes)
+        y += 4
+      }
+
+      // ═══════════════════════════════════════════
+      // CHEAT DAY
+      // ═══════════════════════════════════════════
+      if (dietData.cheatDay) {
+        checkPage(16)
+        sectionTitle('COMIDA LIBRE')
+        bodyText(dietData.cheatDay)
+        y += 4
+      }
+
+      // ═══════════════════════════════════════════
+      // TIPS
+      // ═══════════════════════════════════════════
       if (dietData.tips?.length > 0) {
-        if (y > 240) { doc.addPage(); addBg(); y = 20 }
-        doc.setDrawColor(40, 42, 65)
+        checkPage(20)
+        doc.setDrawColor(220, 220, 230)
+        doc.setLineWidth(0.3)
         doc.line(20, y, pageW - 20, y)
-        y += 10
+        y += 8
         sectionTitle('RECOMENDACIONES')
         dietData.tips.forEach((t: string) => {
-          if (y > 268) { doc.addPage(); addBg(); y = 20 }
+          checkPage()
+          const lines = doc.splitTextToSize(`→ ${t}`, pageW - 40)
           doc.setFont('helvetica', 'normal')
           doc.setFontSize(9)
-          doc.setTextColor(180, 180, 200)
-          const lines = doc.splitTextToSize(`→ ${t}`, pageW - 55)
-          doc.text(lines, 26, y)
-          y += (lines as string[]).length * 5 + 3
+          doc.setTextColor(40, 40, 40)
+          doc.text(lines, 20, y)
+          y += (lines as string[]).length * 4.5 + 3
         })
       }
 
-      // ── Footer on every page ──
+      // ═══════════════════════════════════════════
+      // SHOPPING LIST
+      // ═══════════════════════════════════════════
+      if (dietData.shoppingList?.length > 0) {
+        checkPage(20)
+        doc.setDrawColor(220, 220, 230)
+        doc.setLineWidth(0.3)
+        doc.line(20, y, pageW - 20, y)
+        y += 8
+        sectionTitle('LISTA DE LA COMPRA (SEMANAL)')
+
+        // Group by category
+        const grouped: Record<string, { item: string; weeklyGrams: number }[]> = {}
+        dietData.shoppingList.forEach((si: ShoppingItem) => {
+          if (!grouped[si.category]) grouped[si.category] = []
+          grouped[si.category].push({ item: si.item, weeklyGrams: si.weeklyGrams })
+        })
+
+        Object.entries(grouped).forEach(([cat, items]) => {
+          checkPage(14)
+          doc.setFont('helvetica', 'bold')
+          doc.setFontSize(8.5)
+          doc.setTextColor(123, 63, 228)
+          doc.text(cat, 20, y)
+          y += 5
+          items.forEach(si => {
+            const gramsStr = si.weeklyGrams ? ` (${si.weeklyGrams}g/semana)` : ''
+            bulletItem(`${si.item}${gramsStr}`)
+          })
+          y += 2
+        })
+      }
+
+      // ═══════════════════════════════════════════
+      // FOOTER on every page
+      // ═══════════════════════════════════════════
       const total = doc.getNumberOfPages()
       for (let p = 1; p <= total; p++) {
         doc.setPage(p)
         doc.setFont('helvetica', 'normal')
         doc.setFontSize(7.5)
-        doc.setTextColor(60, 62, 90)
-        doc.text('angelai.app · Plan generado con inteligencia artificial · Uso personal', pageW / 2, 291, { align: 'center' })
-        if (total > 1) doc.text(`${p} / ${total}`, pageW - 20, 291, { align: 'right' })
+        doc.setTextColor(150, 150, 170)
+        doc.text('angelai.app · Plan IA personalizado', pageW / 2, 291, { align: 'center' })
+        doc.text(`${p} / ${total}`, pageW - 20, 291, { align: 'right' })
       }
 
       doc.save(`angelai-plan-${new Date().toISOString().split('T')[0]}.pdf`)
