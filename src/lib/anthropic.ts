@@ -179,6 +179,21 @@ SUPLEMENTACIÓN:
 17. Whey protein: úsalo POST-ENTRENAMIENTO o para completar proteína diaria — NUNCA asociado al cheat meal
 18. Solo recomienda suplementos con evidencia científica sólida (creatina, whey, omega3, vitamina D si déficit)
 
+CALIDAD POR COMIDA:
+19. antesDesayuno: SOLO si hay razón médica o deportiva (ej: "Vaso de agua + 5g creatina"). Si no aplica, devuelve array vacío []
+20. Desayuno: SIEMPRE proteína real + carbohidrato con fibra. Ejemplo bueno: "80g avena + 200g yogur griego 0% + 1 plátano + 1 scoop whey". NUNCA solo café
+21. Almuerzo/Cena: SIEMPRE proteína + verduras (mínimo 200g) + carbohidrato complejo. Ejemplo: "180g salmón al horno + 250g brócoli + 80g arroz integral en seco"
+22. Media mañana / merienda: snacks densos nutricionalmente. Ejemplo: "30g nueces + 1 manzana" o "200g yogur griego + 20g miel + frutos rojos"
+
+ERRORES PROHIBIDOS (nunca hagas esto):
+❌ Café cortado como única ingesta matutina o como antesDesayuno
+❌ "Ensalada" sin especificar los ingredientes exactos con gramos
+❌ Repetir el mismo alimento proteico más de 2 días seguidos
+❌ Menos de 3 verduras distintas en la semana
+❌ Whey protein en el cheat meal
+❌ Omega 3 en dosis de 3g
+❌ Un solo alimento en una comida principal sin acompañamiento
+
 RESPONDE SOLO EN ESPAÑOL`
 
   const userPrompt = `Genera el plan completo para este usuario.
@@ -309,11 +324,9 @@ Responde ÚNICAMENTE con este JSON exacto (sin markdown, sin texto adicional):
     messages.push({ role: 'user', content: userPrompt })
   }
 
-  const hasPhotos = !!(frontPhotoBase64 || sidePhotoBase64)
-
   const response = await anthropic.messages.create({
-    model: hasPhotos ? 'claude-sonnet-4-6' : 'claude-haiku-4-5-20251001',
-    max_tokens: 6000,
+    model: 'claude-sonnet-4-6',
+    max_tokens: 8000,
     system: systemPrompt,
     messages,
   })
