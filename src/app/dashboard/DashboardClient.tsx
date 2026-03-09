@@ -188,10 +188,9 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
 
       doc.setFont('helvetica', 'normal')
       doc.setFontSize(9)
-      doc.setTextColor(255, 255, 255)
-      doc.setGState({ opacity: 0.6 })
+      doc.setTextColor(180, 180, 200)
       doc.text('Plan de Nutrición Personalizado', 20, 31)
-      doc.setGState({ opacity: 1 })
+      doc.setTextColor(255, 255, 255)
       doc.text(
         new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' }),
         pageW - 20, 31, { align: 'right' }
