@@ -98,6 +98,7 @@ export async function analyzBodyAndGenerateDiet(params: {
   sidePhotoBase64?: string
   frontPhotoMime?: string
   sidePhotoMime?: string
+  freeTextContext?: string | null
   preferences?: {
     trainingDays?: number | null
     cardioTime?: string | null
@@ -112,7 +113,7 @@ export async function analyzBodyAndGenerateDiet(params: {
     weight, height, waist, hips, chest, arms, goal,
     age, sex, activityLevel, previousCheckIn,
     frontPhotoBase64, sidePhotoBase64, frontPhotoMime, sidePhotoMime,
-    preferences,
+    freeTextContext, preferences,
   } = params
 
   const bmi = (weight / ((height / 100) ** 2)).toFixed(1)
@@ -148,11 +149,14 @@ Tu dieta es REAL, PRÁCTICA y CIENTÍFICAMENTE PRECISA. Especificas gramos exact
 Reglas estrictas:
 1. SIEMPRE especifica gramos exactos (ej: "150g pechuga de pollo", "80g arroz en seco", "2 huevos enteros + 3 claras")
 2. SIEMPRE respeta los macros calculados (±5% de tolerancia)
-3. Los alimentos son reales, accesibles en España/LATAM y económicos
+3. Los alimentos son reales, fáciles de comprar en supermercados de España (Mercadona, Lidl, Aldi) y económicos
 4. El plan de comidas encaja con el horario de entrenamiento
-5. Si hay intolerancias o preferencias, las respetas al 100%
+5. Si hay intolerancias, alimentos odiados o preferencias del usuario, los respetas al 100%
 6. Tu análisis es directo, honesto y motivador — sin rodeos
-7. Respondes SOLO en español`
+7. VARIEDAD: no repitas la misma proteína principal dos días consecutivos (ej: si lunes es pollo, martes no puede ser pollo)
+8. Incluye siempre un día de trampa semanal (cheat meal) donde el usuario come libre sin restricciones
+9. Genera la lista de la compra semanal con gramos exactos para 7 días
+10. Respondes SOLO en español`
 
   const userPrompt = `Genera el plan completo para este usuario.
 
@@ -185,6 +189,11 @@ ${preferences.equipment ? `Equipamiento: ${preferences.equipment}` : ''}
 ${preferences.dislikedExercises?.length ? `Ejercicios EXCLUIDOS (no incluir): ${preferences.dislikedExercises.join(', ')}` : ''}
 ${preferences.trainingNotes ? `Notas de entrenamiento: ${preferences.trainingNotes}` : ''}
 ${preferences.dietNotes ? `Preferencias/intolerancias alimentarias: ${preferences.dietNotes}` : ''}` : ''}
+
+${freeTextContext ? `═══ CONTEXTO ADICIONAL DEL USUARIO ═══
+El usuario ha escrito lo siguiente sobre su vida, horarios, gustos y situación personal. Tenlo muy en cuenta al crear el plan:
+
+"${freeTextContext}"` : ''}
 
 ${frontPhotoBase64 || sidePhotoBase64 ? '═══ ANÁLISIS VISUAL ═══\nAnaliza las fotos adjuntas con precisión clínica: distribución de grasa, retención de agua visible, tono muscular, postura, zonas de acumulación. Compara con check-in anterior si existe.' : ''}
 
@@ -251,6 +260,11 @@ Responde ÚNICAMENTE con este JSON exacto (sin markdown, sin texto adicional):
   "supplements": ["<suplemento con dosis y momento exacto>"],
   "tips": ["<tip específico y accionable, no genérico>", "<tip>", "<tip>"],
   "weeklyPlan": "<resumen del plan semanal: cómo distribuir las comidas los días de entreno vs descanso en 2-3 frases>",
+  "cheatDay": "<día de la semana para la comida libre y descripción, ej: 'Sábado — cena libre sin restricciones'>",
+  "dietVarietyNotes": "<cómo varía la proteína principal cada día para evitar monotonía, ej: 'Lun/Mié/Vie: pollo, Mar/Jue: ternera, Sáb: salmón'>",
+  "shoppingList": [
+    { "item": "<nombre del alimento>", "weeklyGrams": <gramos para 7 días como número>, "category": "<Proteína|Carbohidratos|Verdura|Fruta|Lácteo|Grasa|Otro>" }
+  ],
   "badges": []
 }`
 

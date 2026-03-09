@@ -23,15 +23,18 @@ export default function CheckInClient({
   defaultAge,
   defaultSex,
   defaultActivityLevel,
+  defaultFreeTextContext,
 }: {
   defaultHeight: number
   defaultGoal: string
   defaultAge: number | null
   defaultSex: string | null
   defaultActivityLevel: string | null
+  defaultFreeTextContext?: string | null
 }) {
   const [form, setForm] = useState({ weight: '', waist: '', hips: '', chest: '', arms: '' })
   const [goal, setGoal] = useState(defaultGoal)
+  const [freeTextContext, setFreeTextContext] = useState(defaultFreeTextContext || '')
   const [frontPhoto, setFrontPhoto] = useState<File | null>(null)
   const [sidePhoto, setSidePhoto] = useState<File | null>(null)
   const [frontPreview, setFrontPreview] = useState<string | null>(null)
@@ -70,10 +73,12 @@ export default function CheckInClient({
       if (form.arms) fd.append('arms', form.arms)
       if (frontPhoto) fd.append('frontPhoto', frontPhoto)
       if (sidePhoto) fd.append('sidePhoto', sidePhoto)
+      if (freeTextContext) fd.append('freeTextContext', freeTextContext)
 
       const res = await fetch('/api/analyze', { method: 'POST', body: fd })
       if (!res.ok) throw new Error()
-      router.push('/dashboard')
+      const data = await res.json()
+      router.push(`/plan-listo?checkInId=${data.checkInId}`)
     } catch {
       setError('Error al analizar. Inténtalo de nuevo.')
       setLoading(false)
@@ -247,6 +252,29 @@ export default function CheckInClient({
                 </div>
               ))}
             </div>
+          </div>
+
+          {/* Cuéntame más */}
+          <div style={{ marginBottom: '28px' }}>
+            <label style={{
+              fontSize: '12px', color: 'rgba(255,255,255,0.35)', fontWeight: 500,
+              letterSpacing: '0.3px', display: 'block', marginBottom: '8px',
+            }}>
+              Cuéntame más <span style={{ color: 'rgba(255,255,255,0.2)', fontWeight: 400 }}>(opcional)</span>
+            </label>
+            <textarea
+              value={freeTextContext}
+              onChange={e => setFreeTextContext(e.target.value)}
+              placeholder={'¿Algo que ha cambiado? Horarios, alimentos que quieres incluir o quitar, cómo te ha ido, qué día quieres de trampa...'}
+              rows={4}
+              maxLength={2000}
+              style={{
+                width: '100%', background: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px',
+                color: 'white', padding: '14px 16px', fontSize: '14px',
+                fontFamily: 'inherit', resize: 'none', outline: 'none', lineHeight: 1.5,
+              }}
+            />
           </div>
 
           {error && (

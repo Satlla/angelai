@@ -13,6 +13,7 @@ const ACTIVITY_LABELS: Record<string, string> = {
 export default function SettingsClient({
   email, defaultName, defaultAge, defaultSex,
   height, activityLevel, dietNotes: initialDietNotes,
+  weeklyEmailEnabled: initialWeeklyEmail,
 }: {
   email: string
   defaultName: string
@@ -21,11 +22,13 @@ export default function SettingsClient({
   height: number | null
   activityLevel: string | null
   dietNotes: string
+  weeklyEmailEnabled: boolean
 }) {
   const [name, setName] = useState(defaultName)
   const [age, setAge] = useState(defaultAge)
   const [sex, setSex] = useState(defaultSex)
   const [dietNotes, setDietNotes] = useState(initialDietNotes)
+  const [weeklyEmailEnabled, setWeeklyEmailEnabled] = useState(initialWeeklyEmail)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState('')
@@ -47,7 +50,7 @@ export default function SettingsClient({
         fetch('/api/preferences', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ dietNotes }),
+          body: JSON.stringify({ dietNotes, weeklyEmailEnabled }),
         }),
       ])
 
@@ -179,7 +182,7 @@ export default function SettingsClient({
         )}
 
         {/* Preferencias de dieta */}
-        <div style={{ marginBottom: '32px' }}>
+        <div style={{ marginBottom: '24px' }}>
           <label style={{ fontSize: '12px', color: 'rgba(255,255,255,0.35)', fontWeight: 500, display: 'block', marginBottom: '8px' }}>
             Preferencias / intolerancias alimentarias
           </label>
@@ -195,6 +198,39 @@ export default function SettingsClient({
               fontFamily: 'inherit', resize: 'vertical', outline: 'none', lineHeight: 1.5,
             }}
           />
+        </div>
+
+        {/* Toggle email semanal */}
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)',
+          borderRadius: '12px', padding: '14px 16px', marginBottom: '32px',
+        }}>
+          <div>
+            <p style={{ fontSize: '14px', fontWeight: 500, color: 'rgba(255,255,255,0.75)', marginBottom: '2px' }}>
+              Resumen semanal por email
+            </p>
+            <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.3)' }}>
+              Cada lunes recibes un resumen de tu semana
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setWeeklyEmailEnabled(!weeklyEmailEnabled)}
+            style={{
+              width: '44px', height: '24px', borderRadius: '12px', border: 'none',
+              background: weeklyEmailEnabled ? '#B44FFF' : 'rgba(255,255,255,0.12)',
+              cursor: 'pointer', position: 'relative', flexShrink: 0,
+              transition: 'background 0.2s ease',
+            }}
+          >
+            <span style={{
+              position: 'absolute', top: '2px',
+              left: weeklyEmailEnabled ? '22px' : '2px',
+              width: '20px', height: '20px', borderRadius: '50%',
+              background: 'white', transition: 'left 0.2s ease',
+            }} />
+          </button>
         </div>
 
         {error && (

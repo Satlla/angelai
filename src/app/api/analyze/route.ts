@@ -3,10 +3,30 @@ import { getSession } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { analyzBodyAndGenerateDiet } from '@/lib/anthropic'
 import { put } from '@vercel/blob'
+import { actualizarMedalla } from '@/lib/update-medal'
+
+// Rate limit: max 3 analyze requests per user per hour (endpoint is expensive)
+const analyzeRateMap = new Map<string, { count: number; resetAt: number }>()
+
+function isAnalyzeRateLimited(userId: string): boolean {
+  const now = Date.now()
+  const entry = analyzeRateMap.get(userId)
+  if (!entry || now > entry.resetAt) {
+    analyzeRateMap.set(userId, { count: 1, resetAt: now + 60 * 60 * 1000 })
+    return false
+  }
+  if (entry.count >= 3) return true
+  entry.count++
+  return false
+}
 
 export async function POST(req: NextRequest) {
   const session = await getSession()
   if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+
+  if (isAnalyzeRateLimited(session.userId)) {
+    return NextResponse.json({ error: 'Demasiadas peticiones. Espera una hora antes de intentarlo de nuevo.' }, { status: 429 })
+  }
 
   // Guard: no se puede hacer check-in antes de 15 días (excepto el primero)
   const lastCheckIn = await prisma.checkIn.findFirst({
@@ -35,6 +55,7 @@ export async function POST(req: NextRequest) {
   const age = formData.get('age') ? parseInt(formData.get('age') as string) : undefined
   const sex = (formData.get('sex') as string) || undefined
   const activityLevel = (formData.get('activityLevel') as string) || undefined
+  const freeTextContext = (formData.get('freeTextContext') as string) || undefined
 
   if (!weight || !height || isNaN(weight) || isNaN(height)) {
     return NextResponse.json({ error: 'Peso y altura son obligatorios.' }, { status: 400 })
@@ -97,6 +118,7 @@ export async function POST(req: NextRequest) {
     try {
       result = await analyzBodyAndGenerateDiet({
         weight, height, waist, hips, chest, arms, goal, age, sex, activityLevel,
+        freeTextContext: freeTextContext || null,
         previousCheckIn: previousCheckIn ? {
           weight: previousCheckIn.weight,
           bodyScore: previousCheckIn.bodyScore || 0,
@@ -177,5 +199,8 @@ export async function POST(req: NextRequest) {
     })
   }
 
-  return NextResponse.json({ success: true, checkInId: checkIn.id, result, newBadges: [...new Set(badgesToAdd)] })
+  // Actualizar medalla (no bloqueante — si falla no rompe la respuesta)
+  const newMedal = await actualizarMedalla(session.userId).catch(() => null)
+
+  return NextResponse.json({ success: true, checkInId: checkIn.id, result, newBadges: [...new Set(badgesToAdd)], medal: newMedal })
 }

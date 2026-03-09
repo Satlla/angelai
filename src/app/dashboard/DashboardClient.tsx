@@ -24,9 +24,16 @@ type CheckIn = {
   rank: string | null; analysis: string | null; dietPlan: string | null;
   goal: string; waist?: number | null; hips?: number | null;
   chest?: number | null; arms?: number | null;
+  customizationUsed?: boolean;
 }
 
-type Tab = 'overview' | 'diet' | 'progress' | 'training' | 'history'
+type Tab = 'overview' | 'diet' | 'shopping' | 'progress' | 'training' | 'history'
+
+type ShoppingItem = {
+  item: string;
+  weeklyGrams: number;
+  category: string;
+}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function CustomTooltip({ active, payload, label, unit }: any) {
@@ -67,6 +74,12 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
   const [activeTab, setActiveTab] = useState<Tab>('overview')
   const [pdfLoading, setPdfLoading] = useState(false)
   const [prefs, setPrefs] = useState<UserPreferences>(initialPrefs)
+  const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>(() => {
+    if (typeof window === 'undefined') return {}
+    const weekNum = Math.floor(Date.now() / (7 * 24 * 60 * 60 * 1000))
+    const key = `shopping_${checkIns[0]?.id}_w${weekNum}`
+    try { return JSON.parse(localStorage.getItem(key) || '{}') } catch { return {} }
+  })
   const [blockedDays, setBlockedDays] = useState<number | null>(null)
   const searchParams = useSearchParams()
 
@@ -127,6 +140,23 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
     Peso: c.weight,
     Score: c.bodyScore || 0,
   }))
+
+  function toggleShoppingItem(itemName: string) {
+    const weekNum = Math.floor(Date.now() / (7 * 24 * 60 * 60 * 1000))
+    const key = `shopping_${latest.id}_w${weekNum}`
+    setCheckedItems(prev => {
+      const updated = { ...prev, [itemName]: !prev[itemName] }
+      try { localStorage.setItem(key, JSON.stringify(updated)) } catch { /* noop */ }
+      return updated
+    })
+  }
+
+  function clearShoppingList() {
+    const weekNum = Math.floor(Date.now() / (7 * 24 * 60 * 60 * 1000))
+    const key = `shopping_${latest.id}_w${weekNum}`
+    try { localStorage.removeItem(key) } catch { /* noop */ }
+    setCheckedItems({})
+  }
 
   async function handleLogout() {
     await fetch('/api/auth/logout', { method: 'POST' })
@@ -706,6 +736,160 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
           </div>
         )}
 
+        {/* ── TAB: SHOPPING ── */}
+        {activeTab === 'shopping' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {!dietData?.shoppingList?.length ? (
+              <div style={{
+                background: '#0C0D16', border: '1px solid rgba(255,255,255,0.06)',
+                borderRadius: '16px', padding: '32px 20px', textAlign: 'center',
+              }}>
+                <p style={{ fontSize: '15px', fontWeight: 600, marginBottom: '8px' }}>Lista no disponible</p>
+                <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.35)', lineHeight: 1.6 }}>
+                  Haz un nuevo check-in para generar tu lista de la compra semanal automáticamente.
+                </p>
+              </div>
+            ) : (
+              <>
+                {/* Cheat day info */}
+                {dietData.cheatDay && (
+                  <div style={{
+                    background: 'rgba(255,215,0,0.06)', border: '1px solid rgba(255,215,0,0.2)',
+                    borderRadius: '14px', padding: '14px 18px',
+                    display: 'flex', alignItems: 'center', gap: '12px',
+                  }}>
+                    <span style={{ fontSize: '20px' }}>🎉</span>
+                    <div>
+                      <p style={{ fontSize: '12px', color: 'rgba(255,215,0,0.7)', fontWeight: 600, marginBottom: '2px' }}>
+                        DÍA DE TRAMPA
+                      </p>
+                      <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.7)' }}>{dietData.cheatDay}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Shopping list grouped by category */}
+                {(() => {
+                  const categories: Record<string, ShoppingItem[]> = {}
+                  ;(dietData.shoppingList as ShoppingItem[]).forEach(item => {
+                    const cat = item.category || 'Otro'
+                    if (!categories[cat]) categories[cat] = []
+                    categories[cat].push(item)
+                  })
+                  const totalItems = (dietData.shoppingList as ShoppingItem[]).length
+                  const checkedCount = (dietData.shoppingList as ShoppingItem[]).filter(i => checkedItems[i.item]).length
+                  return (
+                    <>
+                      {/* Progress bar */}
+                      <div style={{
+                        background: '#0C0D16', border: '1px solid rgba(255,255,255,0.06)',
+                        borderRadius: '14px', padding: '16px 18px',
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px',
+                      }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                            <span style={{ fontSize: '13px', fontWeight: 600, color: 'rgba(255,255,255,0.75)' }}>
+                              {checkedCount}/{totalItems} productos
+                            </span>
+                            <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.3)' }}>
+                              {Math.round((checkedCount / totalItems) * 100)}% completado
+                            </span>
+                          </div>
+                          <div style={{ height: '4px', background: 'rgba(255,255,255,0.07)', borderRadius: '2px', overflow: 'hidden' }}>
+                            <div style={{
+                              height: '100%', background: 'linear-gradient(90deg, #B44FFF, #00D9F5)',
+                              borderRadius: '2px', width: `${(checkedCount / totalItems) * 100}%`,
+                              transition: 'width 0.3s ease',
+                            }} />
+                          </div>
+                        </div>
+                        <button
+                          onClick={clearShoppingList}
+                          style={{
+                            fontSize: '12px', color: 'rgba(255,255,255,0.3)', background: 'none',
+                            border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px',
+                            padding: '6px 10px', cursor: 'pointer', fontFamily: 'inherit',
+                            whiteSpace: 'nowrap' as const,
+                          }}
+                        >
+                          Limpiar
+                        </button>
+                      </div>
+
+                      {Object.entries(categories).map(([cat, items]) => (
+                        <div key={cat} style={{
+                          background: '#0C0D16', border: '1px solid rgba(255,255,255,0.06)',
+                          borderRadius: '16px', overflow: 'hidden',
+                        }}>
+                          <div style={{ padding: '14px 18px 0' }}>
+                            <p style={{
+                              fontSize: '10px', letterSpacing: '1.5px', fontWeight: 700,
+                              textTransform: 'uppercase', color: 'rgba(255,255,255,0.28)', marginBottom: '10px',
+                            }}>{cat}</p>
+                          </div>
+                          {items.map((item, i) => {
+                            const checked = !!checkedItems[item.item]
+                            return (
+                              <div
+                                key={item.item}
+                                onClick={() => toggleShoppingItem(item.item)}
+                                style={{
+                                  display: 'flex', alignItems: 'center', gap: '14px',
+                                  padding: '12px 18px',
+                                  borderTop: i === 0 ? '1px solid rgba(255,255,255,0.05)' : 'none',
+                                  borderBottom: i < items.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none',
+                                  cursor: 'pointer',
+                                  opacity: checked ? 0.45 : 1,
+                                  transition: 'opacity 0.15s ease',
+                                }}
+                              >
+                                {/* Checkbox */}
+                                <div style={{
+                                  width: '20px', height: '20px', borderRadius: '6px', flexShrink: 0,
+                                  border: checked ? 'none' : '1.5px solid rgba(255,255,255,0.2)',
+                                  background: checked ? '#B44FFF' : 'transparent',
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  transition: 'all 0.15s ease',
+                                }}>
+                                  {checked && (
+                                    <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                                      <path d="M1 3.5L3.8 6.5L9 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                                    </svg>
+                                  )}
+                                </div>
+                                <div style={{ flex: 1 }}>
+                                  <p style={{
+                                    fontSize: '14px', color: 'rgba(255,255,255,0.8)',
+                                    textDecoration: checked ? 'line-through' : 'none',
+                                    transition: 'all 0.15s ease',
+                                  }}>
+                                    {item.item}
+                                  </p>
+                                </div>
+                                <span style={{
+                                  fontSize: '12px', fontWeight: 600,
+                                  color: 'rgba(255,255,255,0.35)',
+                                  background: 'rgba(255,255,255,0.06)',
+                                  padding: '3px 8px', borderRadius: '6px',
+                                  whiteSpace: 'nowrap' as const,
+                                }}>
+                                  {item.weeklyGrams >= 1000
+                                    ? `${(item.weeklyGrams / 1000).toFixed(1)} kg`
+                                    : `${item.weeklyGrams} g`}
+                                </span>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      ))}
+                    </>
+                  )
+                })()}
+              </>
+            )}
+          </div>
+        )}
+
         {/* ── TAB: PROGRESS ── */}
         {activeTab === 'progress' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -1212,9 +1396,9 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
           {([
             { key: 'overview',  label: 'Resumen',  icon: OverviewIcon },
             { key: 'diet',      label: 'Dieta',    icon: DietIcon },
+            { key: 'shopping',  label: 'Compra',   icon: ShoppingIcon },
             { key: 'progress',  label: 'Progreso', icon: ChartIcon },
             { key: 'training',  label: 'Entreno',  icon: TrainingIcon },
-            { key: 'history',   label: 'Historial', icon: HistoryIcon },
           ] as { key: Tab; label: string; icon: () => React.JSX.Element }[]).map(tab => {
             const isActive = activeTab === tab.key
             return (
@@ -1541,6 +1725,16 @@ function HistoryIcon() {
     <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
       <circle cx="10" cy="10" r="7.5" stroke="currentColor" strokeWidth="1.4" />
       <path d="M10 6v4l2.5 2.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function ShoppingIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+      <path d="M3 4h1.5l2 8h9l1.5-6H6.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+      <circle cx="8.5" cy="15.5" r="1" fill="currentColor"/>
+      <circle cx="14.5" cy="15.5" r="1" fill="currentColor"/>
     </svg>
   )
 }

@@ -1,11 +1,16 @@
 import { SignJWT, jwtVerify } from 'jose'
 import { cookies } from 'next/headers'
 
-const secret = new TextEncoder().encode(process.env.JWT_SECRET || 'fallback-secret')
 const COOKIE = 'angelai_session'
 const MAX_AGE = 60 * 60 * 24 * 30 // 30 días
 
+function getSecret() {
+  if (!process.env.JWT_SECRET) throw new Error('JWT_SECRET is not set')
+  return new TextEncoder().encode(process.env.JWT_SECRET)
+}
+
 export async function createSession(userId: string, email: string) {
+  const secret = getSecret()
   const token = await new SignJWT({ userId, email })
     .setProtectedHeader({ alg: 'HS256' })
     .setExpirationTime('30d')
@@ -30,7 +35,7 @@ export async function getSession() {
     const token = cookieStore.get(COOKIE)?.value
     if (!token) return null
 
-    const { payload } = await jwtVerify(token, secret)
+    const { payload } = await jwtVerify(token, getSecret())
     const session = payload as { userId: string; email: string; iat?: number }
 
     // Renovar si queda menos de 7 días

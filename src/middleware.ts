@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { jwtVerify } from 'jose'
 
-const secret = new TextEncoder().encode(process.env.JWT_SECRET || 'fallback-secret')
-
-const protectedRoutes = ['/dashboard', '/onboarding', '/checkin', '/settings']
+const protectedRoutes = ['/dashboard', '/onboarding', '/checkin', '/settings', '/daily']
 
 export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname
@@ -11,11 +9,18 @@ export async function middleware(request: NextRequest) {
 
   if (!isProtected) return NextResponse.next()
 
+  if (!process.env.JWT_SECRET) {
+    // Misconfigured server — block access to protected routes
+    return NextResponse.redirect(new URL('/?error=misconfigured', request.url))
+  }
+
   const token = request.cookies.get('angelai_session')?.value
 
   if (!token) {
     return NextResponse.redirect(new URL('/', request.url))
   }
+
+  const secret = new TextEncoder().encode(process.env.JWT_SECRET)
 
   try {
     await jwtVerify(token, secret)
@@ -26,5 +31,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/onboarding/:path*', '/checkin/:path*', '/settings/:path*'],
+  matcher: ['/dashboard/:path*', '/onboarding/:path*', '/checkin/:path*', '/settings/:path*', '/daily/:path*'],
 }

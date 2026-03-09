@@ -15,6 +15,11 @@ export default async function Dashboard() {
       where: { userId: user.id },
       orderBy: { createdAt: 'desc' },
       take: 20,
+      select: {
+        id: true, createdAt: true, weight: true, bodyScore: true, rank: true,
+        analysis: true, dietPlan: true, goal: true, waist: true, hips: true,
+        chest: true, arms: true, customizationUsed: true,
+      },
     }),
     prisma.userBadge.findMany({ where: { userId: user.id } }),
     prisma.userPreferences.findUnique({ where: { userId: user.id } }),
@@ -43,6 +48,7 @@ export default async function Dashboard() {
         hips: c.hips,
         chest: c.chest,
         arms: c.arms,
+        customizationUsed: c.customizationUsed,
       }))}
       badges={badges.map((b: typeof badges[0]) => ({ badge: b.badge, earnedAt: b.earnedAt.toISOString() }))}
       daysLeft={daysLeft}

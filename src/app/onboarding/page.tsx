@@ -26,7 +26,7 @@ const ACTIVITY_LEVELS = [
   { value: 'atletico', label: 'Atlético', desc: 'Doble sesión o deporte competitivo' },
 ]
 
-const TOTAL_STEPS = 4
+const TOTAL_STEPS = 5
 
 export default function Onboarding() {
   const [step, setStep] = useState(0)
@@ -39,6 +39,7 @@ export default function Onboarding() {
   const [sidePhoto, setSidePhoto] = useState<File | null>(null)
   const [frontPreview, setFrontPreview] = useState<string | null>(null)
   const [sidePreview, setSidePreview] = useState<string | null>(null)
+  const [freeTextContext, setFreeTextContext] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const router = useRouter()
@@ -62,7 +63,7 @@ export default function Onboarding() {
   async function handleSubmit() {
     setLoading(true)
     setError('')
-    setStep(4)
+    setStep(5)
 
     try {
       const fd = new FormData()
@@ -78,15 +79,17 @@ export default function Onboarding() {
       if (activityLevel) fd.append('activityLevel', activityLevel)
       if (frontPhoto) fd.append('frontPhoto', frontPhoto)
       if (sidePhoto) fd.append('sidePhoto', sidePhoto)
+      if (freeTextContext) fd.append('freeTextContext', freeTextContext)
 
       const res = await fetch('/api/analyze', { method: 'POST', body: fd })
       if (!res.ok) throw new Error('Error en el análisis')
 
-      router.push('/dashboard')
+      const data = await res.json()
+      router.push(`/plan-listo?checkInId=${data.checkInId}`)
     } catch {
       setError('Error al analizar. Inténtalo de nuevo.')
       setLoading(false)
-      setStep(3)
+      setStep(4)
     }
   }
 
@@ -101,7 +104,7 @@ export default function Onboarding() {
       </div>
 
       {/* Header */}
-      {step < 4 && (
+      {step < 5 && (
         <div style={{
           maxWidth: '480px',
           width: '100%',
@@ -128,7 +131,7 @@ export default function Onboarding() {
         maxWidth: '480px',
         width: '100%',
         margin: '0 auto',
-        padding: '40px 24px 32px',
+        padding: step === 5 ? '0' : '40px 24px 32px',
         display: 'flex',
         flexDirection: 'column',
       }}>
@@ -540,6 +543,64 @@ export default function Onboarding() {
               <button
                 className="btn-primary"
                 style={{ flex: 1, padding: '16px' }}
+                onClick={() => setStep(4)}
+              >
+                Continuar
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* STEP 4 — Cuéntame más */}
+        {step === 4 && (
+          <div className="slide-in">
+            <div style={{ marginBottom: '28px' }}>
+              <h1 style={{ fontSize: '26px', fontWeight: 800, letterSpacing: '-0.8px', marginBottom: '8px' }}>
+                Cuéntame más
+              </h1>
+              <p style={{ fontSize: '15px', color: 'rgba(255,255,255,0.35)', lineHeight: 1.5 }}>
+                Opcional pero muy útil. Escribe lo que quieras: horarios, alimentos favoritos o que odias, día de trampa, trabajo, familia, lo que sea.
+              </p>
+            </div>
+
+            <textarea
+              value={freeTextContext}
+              onChange={e => setFreeTextContext(e.target.value)}
+              placeholder={'Ej: Trabajo de 9 a 18h y no puedo cocinar al mediodía, amo la pasta y el arroz, odio el brócoli, me gustaría que el sábado sea mi día libre para comer pizza con mi familia, tengo 30 minutos máximo para preparar el desayuno...'}
+              rows={7}
+              maxLength={2000}
+              style={{
+                width: '100%',
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: '14px',
+                color: 'white',
+                padding: '16px',
+                fontSize: '15px',
+                fontFamily: 'inherit',
+                resize: 'none',
+                outline: 'none',
+                lineHeight: 1.6,
+                marginBottom: '8px',
+              }}
+            />
+            <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.2)', marginBottom: '28px', textAlign: 'right' }}>
+              {freeTextContext.length}/2000
+            </p>
+
+            {error && (
+              <p style={{ color: '#FF6B6B', fontSize: '13px', marginBottom: '16px', textAlign: 'center' }}>
+                {error}
+              </p>
+            )}
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <button className="btn-ghost" onClick={() => setStep(3)}>
+                Atrás
+              </button>
+              <button
+                className="btn-primary"
+                style={{ flex: 1, padding: '16px' }}
                 onClick={handleSubmit}
               >
                 Analizar ahora
@@ -548,8 +609,8 @@ export default function Onboarding() {
           </div>
         )}
 
-        {/* STEP 4 — Analizando */}
-        {step === 4 && (
+        {/* STEP 5 — Analizando */}
+        {step === 5 && (
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '40px 0' }}>
             <div style={{ marginBottom: '32px' }}>
               <svg

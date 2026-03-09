@@ -7,18 +7,24 @@ export default async function CheckIn() {
   const session = await getSession()
   if (!session) redirect('/')
 
-  const lastCheckIn = await prisma.checkIn.findFirst({
-    where: { userId: session.userId },
-    orderBy: { createdAt: 'desc' },
-    select: {
-      createdAt: true,
-      height: true,
-      goal: true,
-      age: true,
-      sex: true,
-      activityLevel: true,
-    },
-  })
+  const [lastCheckIn, prefs] = await Promise.all([
+    prisma.checkIn.findFirst({
+      where: { userId: session.userId },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        createdAt: true,
+        height: true,
+        goal: true,
+        age: true,
+        sex: true,
+        activityLevel: true,
+      },
+    }),
+    prisma.userPreferences.findUnique({
+      where: { userId: session.userId },
+      select: { freeTextContext: true },
+    }),
+  ])
 
   if (!lastCheckIn) redirect('/onboarding')
 
@@ -36,6 +42,7 @@ export default async function CheckIn() {
       defaultAge={lastCheckIn.age}
       defaultSex={lastCheckIn.sex}
       defaultActivityLevel={lastCheckIn.activityLevel}
+      defaultFreeTextContext={prefs?.freeTextContext}
     />
   )
 }

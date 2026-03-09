@@ -8,15 +8,19 @@ datasource db {
 }
 
 model User {
-  id        String      @id @default(cuid())
-  email     String      @unique
-  name      String?
-  age       Int?
-  sex       String?
-  createdAt DateTime    @default(now())
-  checkIns    CheckIn[]
-  badges      UserBadge[]
-  preferences UserPreferences?
+  id             String      @id @default(cuid())
+  email          String      @unique
+  name           String?
+  age            Int?
+  sex            String?
+  profilePhotoUrl String?
+  createdAt      DateTime    @default(now())
+  checkIns       CheckIn[]
+  badges         UserBadge[]
+  preferences    UserPreferences?
+  dailyLogs      DailyLog[]
+  currentMedal   String?     // INICIO | BRONCE | PLATA | ORO | PLATINO | DIAMANTE | LEYENDA
+  medalUpdatedAt DateTime?
 }
 
 model CheckIn {
@@ -41,10 +45,11 @@ model CheckIn {
   sex           String?
   activityLevel String?
 
-  bodyScore Int?
-  rank      String?
-  analysis  String?
-  dietPlan  String?
+  bodyScore         Int?
+  rank              String?
+  analysis          String?
+  dietPlan          String?
+  customizationUsed Boolean  @default(false)
 
   @@index([userId])
 }
@@ -64,6 +69,10 @@ model UserPreferences {
 
   // Dieta
   dietNotes         String?        // alergias, preferencias, intolerancias
+  freeTextContext   String?        // contexto libre del usuario
+
+  // Notificaciones
+  weeklyEmailEnabled Boolean @default(true)
 
   updatedAt         DateTime @updatedAt
   createdAt         DateTime @default(now())
@@ -77,4 +86,26 @@ model UserBadge {
   earnedAt DateTime @default(now())
 
   @@unique([userId, badge])
+}
+
+model DailyLog {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  date      DateTime // normalizado a medianoche UTC del día
+  createdAt DateTime @default(now())
+
+  // Cuestionario rápido (sliders / booleans)
+  dietScore    Int      // 0-100: % cumplimiento dieta
+  trainedToday Boolean  // ¿Fuiste al gym/entrenaste?
+  sleptWell    Boolean  // ¿Dormiste bien?
+  waterOk      Boolean  // ¿Bebiste suficiente agua?
+  stressLevel  Int      // 1-5: nivel de estrés
+  notes        String?  // texto libre opcional
+
+  // Puntuación de disciplina calculada (0-100, puede ser null hasta que la IA la evalúe)
+  disciplineScore Int?
+
+  @@unique([userId, date])
+  @@index([userId])
 }
