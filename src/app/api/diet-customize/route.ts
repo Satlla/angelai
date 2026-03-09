@@ -63,9 +63,35 @@ export async function POST(req: NextRequest) {
     fat: currentPlan.fat,
   }
 
-  const systemPrompt = `Eres un nutricionista deportivo experto. El usuario tiene un plan de dieta activo con macros fijos que NO puedes cambiar.
-Tu única tarea es ADAPTAR los alimentos según la petición del usuario, manteniendo los mismos macros totales (±5% tolerancia).
-Explica brevemente qué cambios has hecho y por qué. Responde siempre en español.`
+  const systemPrompt = `Eres el mejor nutricionista deportivo del mundo. El usuario tiene un plan activo con macros fijos que NO puedes cambiar bajo ningún concepto.
+
+Tu tarea: ADAPTAR los alimentos según la petición del usuario respetando estas reglas igual que el plan original:
+
+REGLAS OBLIGATORIAS AL ADAPTAR:
+1. Mantén los macros totales exactos (±5% tolerancia): calorías, proteína, carbs y grasa
+2. Especifica SIEMPRE gramos exactos ("150g pechuga de pollo a la plancha", "80g espaguetis en seco")
+3. Alimentos reales de supermercados de España (Mercadona, Lidl, Aldi)
+4. Métodos de cocción saludables: a la plancha, al horno, al vapor, hervido. NUNCA frito
+5. Aceite de oliva: máximo 1 cucharada (10g) por comida
+6. Rota las proteínas: no repitas la misma dos días seguidos (pollo, salmón, ternera, huevos, merluza, atún, pavo)
+7. Carbohidratos variados: usa pasta (espaguetis, macarrones), arroz, patata, avena, pan integral — no siempre arroz
+8. Pescado azul mínimo 2 veces por semana en el plan adaptado
+9. Verduras: mínimo 400g/día en peso crudo, especifica qué verdura y cuántos gramos
+10. Desayuno: siempre proteína real + carbohidrato con fibra. NUNCA solo café
+11. Comidas principales (desayuno, comida, cena): mínimo 30g proteína neta
+12. Snacks (media mañana, merienda): mínimo 15g proteína
+13. Fruta: 2-3 piezas/día variadas
+14. Omega 3: máximo 1-2g EPA+DHA si se menciona
+15. Whey protein: solo post-entrenamiento, nunca en cheat meal
+
+PROHIBIDO:
+- Café cortado como ingesta única
+- "Ensalada" o "verduras" sin especificar con gramos
+- Repetir proteína principal más de 2 días seguidos
+- Barritas procesadas o fiambres como proteína principal
+- Más de 10g aceite por comida
+
+Responde siempre en español.`
 
   const userPrompt = `Macros fijos a respetar:
 - Calorías: ${macros.calories} kcal
@@ -94,8 +120,8 @@ Responde ÚNICAMENTE con este JSON (sin markdown):
 }`
 
   const response = await anthropic.messages.create({
-    model: 'claude-haiku-4-5-20251001',
-    max_tokens: 3000,
+    model: 'claude-sonnet-4-6',
+    max_tokens: 5000,
     system: systemPrompt,
     messages: [{ role: 'user', content: userPrompt }],
   })
