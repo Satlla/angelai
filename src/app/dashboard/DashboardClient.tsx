@@ -35,8 +35,39 @@ type ShoppingItem = {
   category: string;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function CustomTooltip({ active, payload, label, unit }: any) {
+type DietPlan = {
+  calories: number; protein: number; carbs: number; fat: number; tdee?: number;
+  bodyScore: number; rank: string; analysis: string; progressSummary?: string;
+  diet: {
+    antesDesayuno: string[];
+    desayuno: { opcionA: string[]; opcionB: string[]; opcionC: string[] };
+    mediaManana: { opcionA: string[]; opcionB: string[]; opcionC: string[] };
+    comida?: { opcionA: string[]; opcionB: string[]; opcionC: string[] };
+    almuerzo?: { opcionA: string[]; opcionB: string[]; opcionC: string[] };
+    merienda: { opcionA: string[]; opcionB?: string[]; opcionC?: string[] };
+    cena: { opcionA: string[]; opcionB: string[]; opcionC: string[] };
+    antesDeCormir: string[];
+    [key: string]: { opcionA?: string[]; opcionB?: string[]; opcionC?: string[] } | string[] | undefined;
+  };
+  mealCalories: Record<string, number>;
+  training: {
+    dias: number; tipo: string;
+    rutina: Array<{ dia: string; nombre: string; ejercicios: Array<{ nombre: string; series: number; reps: string; descanso: string }> }>;
+  };
+  supplements: string[]; tips: string[]; weeklyPlan: string;
+  cheatDay: string; dietVarietyNotes: string;
+  shoppingList: ShoppingItem[];
+  lastCustomization?: string; badges?: string[];
+}
+
+interface CustomTooltipProps {
+  active?: boolean;
+  payload?: Array<{ value: number }>;
+  label?: string;
+  unit?: string;
+}
+
+function CustomTooltip({ active, payload, label, unit }: CustomTooltipProps) {
   if (!active || !payload?.length) return null
   return (
     <div style={{
@@ -135,7 +166,7 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
 
   const latest = checkIns[0]
   const prev = checkIns[1]
-  const dietData = latest.dietPlan ? JSON.parse(latest.dietPlan) : null
+  const dietData: DietPlan | null = latest.dietPlan ? JSON.parse(latest.dietPlan) as DietPlan : null
   const score = latest.bodyScore || 0
   const rank = latest.rank || 'BRONCE'
   const rankColor = RANK_COLORS[rank] || '#B44FFF'
@@ -415,7 +446,7 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
             // Simple array (antesDesayuno / antesDeCormir)
             const items: string[] = Array.isArray(data) ? data : []
             items.forEach(item => bulletItem(item))
-          } else {
+          } else if (!Array.isArray(data)) {
             // opcionA (main)
             const opA: string[] = data.opcionA || []
             opA.forEach(item => bulletItem(item))
@@ -423,15 +454,13 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
             // opcionB
             if (data.opcionB?.length) {
               subLabel('Alternativa B:')
-              const opB: string[] = data.opcionB
-              opB.forEach(item => bulletItem(item, 28))
+              data.opcionB.forEach(item => bulletItem(item, 28))
             }
 
             // opcionC
             if (data.opcionC?.length) {
               subLabel('Alternativa C:')
-              const opC: string[] = data.opcionC
-              opC.forEach(item => bulletItem(item, 28))
+              data.opcionC.forEach(item => bulletItem(item, 28))
             }
           }
 
@@ -1159,13 +1188,13 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
               </div>
             ) : (() => {
               const categories: Record<string, ShoppingItem[]> = {}
-              ;(dietData.shoppingList as ShoppingItem[]).forEach(item => {
+              ;dietData.shoppingList.forEach(item => {
                 const cat = item.category || 'Otro'
                 if (!categories[cat]) categories[cat] = []
                 categories[cat].push(item)
               })
-              const totalItems = (dietData.shoppingList as ShoppingItem[]).length
-              const checkedCount = (dietData.shoppingList as ShoppingItem[]).filter(i => checkedItems[i.item]).length
+              const totalItems = dietData.shoppingList.length
+              const checkedCount = dietData.shoppingList.filter(i => checkedItems[i.item]).length
 
               return (
                 <>
