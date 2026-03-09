@@ -91,6 +91,11 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
   const [prefsOpen, setPrefsOpen] = useState(false)
   const [editPrefs, setEditPrefs] = useState<UserPreferences>(initialPrefs)
   const [swappingExercise, setSwappingExercise] = useState<string | null>(null)
+  const [showAdjust, setShowAdjust] = useState(false)
+  const [adjustText, setAdjustText] = useState('')
+  const [adjustLoading, setAdjustLoading] = useState(false)
+  const [adjustError, setAdjustError] = useState('')
+  const [adjustDone, setAdjustDone] = useState(false)
   const [swapInput, setSwapInput] = useState('')
   const router = useRouter()
 
@@ -732,6 +737,106 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
                 </>
               )}
             </button>
+
+            {/* Ajuste del plan */}
+            {!adjustDone && !checkIns[0]?.customizationUsed && (
+              <div style={{
+                background: 'rgba(180,79,255,0.05)',
+                border: '1px solid rgba(180,79,255,0.15)',
+                borderRadius: '14px', padding: '16px 18px',
+              }}>
+                {!showAdjust ? (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+                    <div>
+                      <p style={{ fontSize: '13px', fontWeight: 600, color: 'rgba(255,255,255,0.7)', marginBottom: '2px' }}>
+                        ¿Quieres ajustar algo?
+                      </p>
+                      <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.3)' }}>
+                        Tienes 1 ajuste disponible este ciclo
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setShowAdjust(true)}
+                      style={{
+                        padding: '8px 14px', borderRadius: '9px', cursor: 'pointer',
+                        background: 'rgba(180,79,255,0.15)', border: '1px solid rgba(180,79,255,0.3)',
+                        color: '#B44FFF', fontSize: '13px', fontWeight: 600, fontFamily: 'inherit',
+                        whiteSpace: 'nowrap', flexShrink: 0,
+                      }}
+                    >
+                      Pedir ajuste
+                    </button>
+                  </div>
+                ) : (
+                  <div>
+                    <p style={{ fontSize: '13px', fontWeight: 600, color: 'rgba(255,255,255,0.7)', marginBottom: '10px' }}>
+                      ¿Qué quieres cambiar?
+                    </p>
+                    <textarea
+                      value={adjustText}
+                      onChange={e => setAdjustText(e.target.value)}
+                      placeholder="Ej: No quiero pollo en el desayuno, prefiero avena. Quiero el día de trampa el viernes en vez del sábado..."
+                      rows={3}
+                      maxLength={500}
+                      autoFocus
+                      style={{
+                        width: '100%', background: 'rgba(255,255,255,0.04)',
+                        border: '1px solid rgba(255,255,255,0.12)', borderRadius: '10px',
+                        color: 'white', padding: '12px 14px', fontSize: '14px',
+                        fontFamily: 'inherit', resize: 'none', outline: 'none', lineHeight: 1.5,
+                        marginBottom: '10px',
+                      }}
+                    />
+                    {adjustError && (
+                      <p style={{ color: '#FF6B6B', fontSize: '12px', marginBottom: '10px' }}>{adjustError}</p>
+                    )}
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button
+                        onClick={() => { setShowAdjust(false); setAdjustError('') }}
+                        style={{
+                          flex: 1, padding: '10px', fontFamily: 'inherit',
+                          background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
+                          borderRadius: '10px', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', fontSize: '13px',
+                        }}
+                      >Cancelar</button>
+                      <button
+                        onClick={async () => {
+                          if (!adjustText.trim()) return
+                          setAdjustLoading(true)
+                          setAdjustError('')
+                          try {
+                            const res = await fetch('/api/diet-customize', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ customRequest: adjustText, checkInId: checkIns[0]?.id }),
+                            })
+                            const data = await res.json()
+                            if (!res.ok) { setAdjustError(data.error || 'Error al ajustar.'); return }
+                            setAdjustDone(true)
+                            setShowAdjust(false)
+                            window.location.reload()
+                          } catch {
+                            setAdjustError('Error de conexión.')
+                          } finally {
+                            setAdjustLoading(false)
+                          }
+                        }}
+                        disabled={adjustLoading || !adjustText.trim()}
+                        style={{
+                          flex: 2, padding: '10px', fontFamily: 'inherit',
+                          background: adjustLoading ? 'rgba(180,79,255,0.1)' : 'rgba(180,79,255,0.2)',
+                          border: '1px solid rgba(180,79,255,0.4)',
+                          borderRadius: '10px', color: '#B44FFF',
+                          cursor: adjustLoading ? 'not-allowed' : 'pointer', fontSize: '13px', fontWeight: 600,
+                        }}
+                      >
+                        {adjustLoading ? 'Ajustando...' : 'Aplicar ajuste →'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 

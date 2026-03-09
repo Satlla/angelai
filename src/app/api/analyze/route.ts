@@ -145,10 +145,11 @@ export async function POST(req: NextRequest) {
       break
     } catch (err) {
       attempts++
+      const errMsg = err instanceof Error ? err.message : String(err)
+      console.error(`[analyze] Claude attempt ${attempts} failed:`, errMsg)
       if (attempts >= 2) {
-        console.error('Claude error after retries:', err)
         return NextResponse.json(
-          { error: 'El análisis tardó demasiado. Inténtalo de nuevo en unos minutos.' },
+          { error: 'El análisis tardó demasiado. Inténtalo de nuevo en unos minutos.', detail: errMsg },
           { status: 503 }
         )
       }
