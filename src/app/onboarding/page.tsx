@@ -1,7 +1,17 @@
 'use client'
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import MeasureGuideModal, { MeasureHelpButton } from '@/components/MeasureGuideModal'
+
+const ANALYSIS_STEPS = [
+  { label: 'Calculando TDEE y metabolismo basal', delay: 1500 },
+  { label: 'Analizando composición corporal', delay: 4000 },
+  { label: 'Calculando macros óptimos', delay: 7000 },
+  { label: 'Diseñando plan de nutrición', delay: 11000 },
+  { label: 'Creando rutina de entrenamiento', delay: 16000 },
+  { label: 'Generando lista de la compra', delay: 21000 },
+  { label: 'Ajustando detalles personalizados', delay: 26000 },
+]
 
 const GOALS = [
   { value: 'definicion', label: 'Definición', desc: 'Bajar grasa manteniendo músculo' },
@@ -51,7 +61,16 @@ export default function Onboarding() {
   const [measureModal, setMeasureModal] = useState<{ open: boolean; tab: 'waist' | 'hips' | 'chest' | 'arms' | 'thighs' | 'calves' | 'shoulders' }>({ open: false, tab: 'waist' })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [doneSteps, setDoneSteps] = useState<number[]>([])
   const router = useRouter()
+
+  useEffect(() => {
+    if (!loading) { setDoneSteps([]); return }
+    const timers = ANALYSIS_STEPS.map((s, i) =>
+      setTimeout(() => setDoneSteps(prev => [...prev, i]), s.delay)
+    )
+    return () => timers.forEach(clearTimeout)
+  }, [loading])
   const frontRef = useRef<HTMLInputElement>(null)
   const sideRef = useRef<HTMLInputElement>(null)
 
@@ -757,14 +776,9 @@ export default function Onboarding() {
 
         {/* STEP 5 — Analizando */}
         {step === 5 && (
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '40px 0' }}>
-            <div style={{ marginBottom: '32px' }}>
-              <svg
-                width="56"
-                height="56"
-                viewBox="0 0 56 56"
-                style={{ animation: 'spin 1.2s linear infinite' }}
-              >
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '40px 0' }}>
+            <div style={{ marginBottom: '32px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <svg width="36" height="36" viewBox="0 0 56 56" style={{ animation: 'spin 1.2s linear infinite', flexShrink: 0 }}>
                 <defs>
                   <linearGradient id="spinGrad" x1="0%" y1="0%" x2="100%" y2="100%">
                     <stop offset="0%" stopColor="#B44FFF" />
@@ -772,23 +786,74 @@ export default function Onboarding() {
                   </linearGradient>
                 </defs>
                 <circle cx="28" cy="28" r="22" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="4" />
-                <circle
-                  cx="28" cy="28" r="22"
-                  fill="none"
-                  stroke="url(#spinGrad)"
-                  strokeWidth="4"
-                  strokeLinecap="round"
-                  strokeDasharray="138"
-                  strokeDashoffset="104"
-                />
+                <circle cx="28" cy="28" r="22" fill="none" stroke="url(#spinGrad)" strokeWidth="4" strokeLinecap="round" strokeDasharray="138" strokeDashoffset="104" />
               </svg>
+              <div>
+                <h2 style={{ fontSize: '20px', fontWeight: 700, letterSpacing: '-0.5px', marginBottom: '4px' }}>
+                  Generando tu plan
+                </h2>
+                <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.3)' }}>
+                  La IA está trabajando — puede tardar 30–40 segundos
+                </p>
+              </div>
             </div>
-            <h2 style={{ fontSize: '22px', fontWeight: 700, letterSpacing: '-0.5px', marginBottom: '12px' }}>
-              Analizando tus datos
-            </h2>
-            <p style={{ fontSize: '15px', color: 'rgba(255,255,255,0.3)', lineHeight: 1.7, maxWidth: '280px' }}>
-              La IA está generando tu plan personalizado. Esto puede tardar 20–30 segundos.
-            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
+              {ANALYSIS_STEPS.map((s, i) => {
+                const done = doneSteps.includes(i)
+                const active = !done && doneSteps.length === i
+                return (
+                  <div key={i} style={{
+                    display: 'flex', alignItems: 'center', gap: '14px',
+                    padding: '12px 16px',
+                    borderRadius: '12px',
+                    background: done ? 'rgba(180,79,255,0.06)' : active ? 'rgba(255,255,255,0.03)' : 'transparent',
+                    marginBottom: '4px',
+                    transition: 'all 0.3s ease',
+                  }}>
+                    <div style={{
+                      width: '22px', height: '22px', borderRadius: '50%', flexShrink: 0,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      background: done
+                        ? 'linear-gradient(135deg, #B44FFF, #00D9F5)'
+                        : active
+                          ? 'rgba(255,255,255,0.08)'
+                          : 'rgba(255,255,255,0.04)',
+                      border: done ? 'none' : `1.5px solid ${active ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.08)'}`,
+                      transition: 'all 0.4s ease',
+                    }}>
+                      {done ? (
+                        <svg width="11" height="9" viewBox="0 0 11 9" fill="none">
+                          <path d="M1 4L4 7.5L10 1" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      ) : active ? (
+                        <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'rgba(255,255,255,0.5)', animation: 'pulse 1s ease-in-out infinite' }} />
+                      ) : null}
+                    </div>
+                    <span style={{
+                      fontSize: '14px',
+                      fontWeight: done ? 500 : 400,
+                      color: done ? 'rgba(255,255,255,0.85)' : active ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.2)',
+                      transition: 'color 0.3s ease',
+                    }}>
+                      {s.label}
+                    </span>
+                    {done && (
+                      <span style={{ marginLeft: 'auto', fontSize: '11px', color: 'rgba(180,79,255,0.7)', fontWeight: 500 }}>
+                        listo
+                      </span>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+
+            <style>{`
+              @keyframes pulse {
+                0%, 100% { opacity: 0.4; transform: scale(0.8); }
+                50% { opacity: 1; transform: scale(1.2); }
+              }
+            `}</style>
           </div>
         )}
       </div>
