@@ -202,10 +202,22 @@ FRUTA:
 32. Preferiblemente por la mañana o post-entreno (aprovecha el pico de insulina)
 33. Evitar fruta después de las 19:00 salvo que el entreno sea nocturno
 
+CARBOHIDRATOS — FUENTES VARIADAS (rota, no siempre arroz):
+34. Usa estas fuentes de carbohidratos rotando a lo largo de la semana:
+    - Pasta (espaguetis, macarrones, penne) — perfecta para comida o post-entreno: 80g en seco = ~280 kcal
+    - Arroz blanco o integral — post-entreno ideal
+    - Avena — desayuno perfecto
+    - Patata o batata — comida o cena
+    - Pan integral 100% — desayuno o merienda
+    - Legumbres (lentejas, garbanzos) — aportan también proteína
+    - Quinoa — alternativa sin gluten
+35. NO uses siempre arroz — la pasta es igual de válida y más variada y sabrosa
+36. Pasta: especifica "80g pasta integral en seco" o "80g espaguetis en seco" + salsa saludable (ej: tomate natural, pesto ligero, sin nata)
+
 CALIDAD NUTRICIONAL:
-34. Fibra mínima: 25g/día — usa avena, legumbres, verduras, frutas
-35. Grasas de calidad: frutos secos, aguacate, salmón, huevos — no solo aceite de oliva
-36. El desayuno SIEMPRE incluye fibra (avena, pan integral real, fruta) y proteína de calidad
+37. Fibra mínima: 25g/día — usa avena, legumbres, verduras, frutas, pasta integral
+38. Grasas de calidad: frutos secos, aguacate, salmón, huevos — no solo aceite de oliva
+39. El desayuno SIEMPRE incluye fibra (avena, pan integral real, fruta) y proteína de calidad
 
 CHEAT MEAL:
 37. Solo 1 cheat meal por semana (NO 3). Una cena libre, no un día libre entero
@@ -219,7 +231,11 @@ SUPLEMENTACIÓN:
 CALIDAD POR COMIDA:
 42. antesDesayuno: SOLO si hay razón deportiva o médica clara. Ejemplos válidos: "Vaso de agua + 5g creatina monohidrato" o "300ml agua en ayunas". Si no aplica claramente, devuelve array vacío []
 43. Desayuno: SIEMPRE proteína real + carbohidrato con fibra. Ejemplo: "80g avena + 200g yogur griego 0% + 1 plátano + 1 scoop whey". NUNCA solo café
-44. Comida/Cena: SIEMPRE proteína (≥30g netos) + verduras (≥200g en crudo, especificadas) + carbohidrato complejo + método de cocción. Ejemplo: "180g salmón al horno + 250g brócoli al vapor + 80g arroz integral en seco + 10g AOVE"
+44. Comida/Cena: SIEMPRE proteína (≥30g netos) + verduras (≥200g en crudo, especificadas) + carbohidrato complejo + método de cocción. Ejemplos:
+    - "180g salmón al horno + 250g brócoli al vapor + 80g arroz integral en seco + 10g AOVE"
+    - "150g pechuga de pollo a la plancha + 200g espinacas salteadas + 80g espaguetis integrales en seco + salsa de tomate natural"
+    - "200g merluza al vapor + 250g judías verdes + 80g macarrones en seco + 10g AOVE"
+    - "150g ternera a la plancha + 200g pimiento rojo asado + 200g patata cocida + tomate"
 45. Media mañana/Merienda: snacks con ≥15g proteína. Ejemplo: "30g nueces + 200g yogur griego 0% (17g proteína)" o "2 tortitas de arroz + 100g requesón + frutos rojos"
 
 ULTRA-PROCESADOS PROHIBIDOS:
