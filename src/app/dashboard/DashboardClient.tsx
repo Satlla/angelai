@@ -96,6 +96,8 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
   const [adjustLoading, setAdjustLoading] = useState(false)
   const [adjustError, setAdjustError] = useState('')
   const [adjustDone, setAdjustDone] = useState(false)
+  const [adjustMessages, setAdjustMessages] = useState<Array<{role: 'user'|'assistant', content: string}>>([])
+  const [pendingDietPlan, setDietPlan] = useState<object | null>(null)
   const [swapInput, setSwapInput] = useState('')
   const router = useRouter()
 
@@ -166,6 +168,45 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
   async function handleLogout() {
     await fetch('/api/auth/logout', { method: 'POST' })
     router.push('/')
+  }
+
+  async function sendAdjustMessage() {
+    if (!adjustText.trim() || adjustLoading) return
+    const userMsg = adjustText.trim()
+    setAdjustText('')
+    setAdjustLoading(true)
+    setAdjustError('')
+
+    const newHistory = [...adjustMessages, { role: 'user' as const, content: userMsg }]
+    setAdjustMessages(newHistory)
+
+    try {
+      const res = await fetch('/api/diet-preview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: userMsg,
+          checkInId: checkIns[0]?.id,
+          history: adjustMessages,
+        }),
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        setAdjustError(data.error || 'Error al procesar tu peticion.')
+        setAdjustMessages(adjustMessages)
+        return
+      }
+
+      setAdjustMessages([...newHistory, { role: 'assistant', content: data.reply }])
+      if (data.diet) setDietPlan(data.diet)
+    } catch {
+      setAdjustError('Error de conexion. Intentalo de nuevo.')
+      setAdjustMessages(adjustMessages)
+    } finally {
+      setAdjustLoading(false)
+    }
   }
 
   async function downloadDietPDF() {
@@ -930,101 +971,167 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
               )}
             </button>
 
-            {/* Ajuste del plan */}
-            {!adjustDone && !checkIns[0]?.customizationUsed && (
+            {/* Chat nutricionista */}
+            {!checkIns[0]?.customizationUsed && !adjustDone && (
               <div style={{
-                background: 'rgba(180,79,255,0.05)',
-                border: '1px solid rgba(180,79,255,0.15)',
-                borderRadius: '14px', padding: '16px 18px',
+                background: 'rgba(180,79,255,0.04)',
+                border: '1px solid rgba(180,79,255,0.12)',
+                borderRadius: '16px',
+                overflow: 'hidden',
               }}>
-                {!showAdjust ? (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+                {/* Header */}
+                <div
+                  onClick={() => setShowAdjust(!showAdjust)}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '14px 18px', cursor: 'pointer',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{
+                      width: '32px', height: '32px', borderRadius: '50%',
+                      background: 'rgba(180,79,255,0.15)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                    }}>
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <circle cx="8" cy="5" r="3" stroke="#B44FFF" strokeWidth="1.3"/>
+                        <path d="M2 14c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke="#B44FFF" strokeWidth="1.3" strokeLinecap="round"/>
+                      </svg>
+                    </div>
                     <div>
-                      <p style={{ fontSize: '13px', fontWeight: 600, color: 'rgba(255,255,255,0.7)', marginBottom: '2px' }}>
-                        ¿Quieres ajustar algo?
+                      <p style={{ fontSize: '13px', fontWeight: 600, color: 'rgba(255,255,255,0.8)', margin: 0 }}>
+                        Habla con tu nutricionista
                       </p>
-                      <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.3)' }}>
-                        Tienes 1 ajuste disponible este ciclo
+                      <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.3)', margin: 0 }}>
+                        1 ajuste disponible este ciclo
                       </p>
                     </div>
-                    <button
-                      onClick={() => setShowAdjust(true)}
-                      style={{
-                        padding: '8px 14px', borderRadius: '9px', cursor: 'pointer',
-                        background: 'rgba(180,79,255,0.15)', border: '1px solid rgba(180,79,255,0.3)',
-                        color: '#B44FFF', fontSize: '13px', fontWeight: 600, fontFamily: 'inherit',
-                        whiteSpace: 'nowrap', flexShrink: 0,
-                      }}
-                    >
-                      Pedir ajuste
-                    </button>
                   </div>
-                ) : (
-                  <div>
-                    <p style={{ fontSize: '13px', fontWeight: 600, color: 'rgba(255,255,255,0.7)', marginBottom: '10px' }}>
-                      ¿Qué quieres cambiar?
-                    </p>
-                    <textarea
-                      value={adjustText}
-                      onChange={e => setAdjustText(e.target.value)}
-                      placeholder="Ej: No quiero pollo en el desayuno, prefiero avena. Quiero el día de trampa el viernes en vez del sábado..."
-                      rows={3}
-                      maxLength={500}
-                      autoFocus
-                      style={{
-                        width: '100%', background: 'rgba(255,255,255,0.04)',
-                        border: '1px solid rgba(255,255,255,0.12)', borderRadius: '10px',
-                        color: 'white', padding: '12px 14px', fontSize: '14px',
-                        fontFamily: 'inherit', resize: 'none', outline: 'none', lineHeight: 1.5,
-                        marginBottom: '10px',
-                      }}
-                    />
-                    {adjustError && (
-                      <p style={{ color: '#FF6B6B', fontSize: '12px', marginBottom: '10px' }}>{adjustError}</p>
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none"
+                    style={{ transform: showAdjust ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', flexShrink: 0 }}>
+                    <path d="M4 6l4 4 4-4" stroke="rgba(255,255,255,0.3)" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </div>
+
+                {showAdjust && (
+                  <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', padding: '0 16px 16px' }}>
+
+                    {/* Chat history */}
+                    {adjustMessages.length > 0 && (
+                      <div style={{ paddingTop: '12px', display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '12px' }}>
+                        {adjustMessages.map((msg, i) => (
+                          <div key={i} style={{
+                            display: 'flex',
+                            justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start',
+                          }}>
+                            <div style={{
+                              maxWidth: '85%',
+                              padding: '10px 14px',
+                              borderRadius: msg.role === 'user' ? '14px 14px 4px 14px' : '14px 14px 14px 4px',
+                              background: msg.role === 'user' ? 'rgba(180,79,255,0.18)' : 'rgba(255,255,255,0.05)',
+                              border: `1px solid ${msg.role === 'user' ? 'rgba(180,79,255,0.3)' : 'rgba(255,255,255,0.08)'}`,
+                              fontSize: '13px',
+                              color: msg.role === 'user' ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.65)',
+                              lineHeight: 1.55,
+                            }}>
+                              {msg.content}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     )}
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <button
-                        onClick={() => { setShowAdjust(false); setAdjustError('') }}
-                        style={{
-                          flex: 1, padding: '10px', fontFamily: 'inherit',
-                          background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
-                          borderRadius: '10px', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', fontSize: '13px',
-                        }}
-                      >Cancelar</button>
-                      <button
-                        onClick={async () => {
-                          if (!adjustText.trim()) return
-                          setAdjustLoading(true)
-                          setAdjustError('')
-                          try {
-                            const res = await fetch('/api/diet-customize', {
-                              method: 'POST',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({ customRequest: adjustText, checkInId: checkIns[0]?.id }),
-                            })
-                            const data = await res.json()
-                            if (!res.ok) { setAdjustError(data.error || 'Error al ajustar.'); return }
-                            setAdjustDone(true)
-                            setShowAdjust(false)
-                            window.location.reload()
-                          } catch {
-                            setAdjustError('Error de conexión.')
-                          } finally {
-                            setAdjustLoading(false)
+
+                    {/* Pending save banner */}
+                    {pendingDietPlan && (
+                      <div style={{
+                        background: 'rgba(0,217,245,0.06)', border: '1px solid rgba(0,217,245,0.2)',
+                        borderRadius: '10px', padding: '12px 14px', marginBottom: '12px',
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px',
+                      }}>
+                        <p style={{ fontSize: '12px', color: 'rgba(0,217,245,0.8)', margin: 0 }}>
+                          Plan modificado listo para guardar
+                        </p>
+                        <button
+                          onClick={async () => {
+                            setAdjustLoading(true)
+                            try {
+                              const res = await fetch('/api/diet-customize', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                  customRequest: adjustMessages.filter(m => m.role === 'user').map(m => m.content).join(' | '),
+                                  checkInId: checkIns[0]?.id,
+                                }),
+                              })
+                              if (res.ok) { setAdjustDone(true); window.location.reload() }
+                            } finally { setAdjustLoading(false) }
+                          }}
+                          disabled={adjustLoading}
+                          style={{
+                            padding: '6px 14px', borderRadius: '8px', cursor: 'pointer',
+                            background: 'rgba(0,217,245,0.15)', border: '1px solid rgba(0,217,245,0.35)',
+                            color: '#00D9F5', fontSize: '12px', fontWeight: 600, fontFamily: 'inherit',
+                            whiteSpace: 'nowrap', flexShrink: 0,
+                          }}
+                        >{adjustLoading ? 'Guardando...' : 'Guardar plan'}</button>
+                      </div>
+                    )}
+
+                    {/* Input area */}
+                    <div style={{ paddingTop: adjustMessages.length === 0 ? '12px' : '0', display: 'flex', gap: '8px' }}>
+                      <textarea
+                        value={adjustText}
+                        onChange={e => setAdjustText(e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter' && !e.shiftKey && adjustText.trim()) {
+                            e.preventDefault()
+                            sendAdjustMessage()
                           }
                         }}
+                        placeholder={adjustMessages.length === 0
+                          ? 'Ej: No puedo merendar, redistribuye esas calorias. Pon pasta en alguna opcion...'
+                          : 'Escribe otro cambio o pide algo diferente...'}
+                        rows={2}
+                        maxLength={1000}
+                        style={{
+                          flex: 1, background: 'rgba(255,255,255,0.04)',
+                          border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px',
+                          color: 'white', padding: '10px 12px', fontSize: '13px',
+                          fontFamily: 'inherit', resize: 'none', outline: 'none', lineHeight: 1.5,
+                        }}
+                      />
+                      <button
+                        onClick={sendAdjustMessage}
                         disabled={adjustLoading || !adjustText.trim()}
                         style={{
-                          flex: 2, padding: '10px', fontFamily: 'inherit',
-                          background: adjustLoading ? 'rgba(180,79,255,0.1)' : 'rgba(180,79,255,0.2)',
-                          border: '1px solid rgba(180,79,255,0.4)',
-                          borderRadius: '10px', color: '#B44FFF',
-                          cursor: adjustLoading ? 'not-allowed' : 'pointer', fontSize: '13px', fontWeight: 600,
+                          width: '40px', height: '40px', flexShrink: 0, alignSelf: 'flex-end',
+                          borderRadius: '10px', cursor: adjustLoading || !adjustText.trim() ? 'not-allowed' : 'pointer',
+                          background: adjustLoading || !adjustText.trim() ? 'rgba(180,79,255,0.08)' : 'rgba(180,79,255,0.25)',
+                          border: '1px solid rgba(180,79,255,0.3)', color: '#B44FFF',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
                         }}
                       >
-                        {adjustLoading ? 'Ajustando...' : 'Aplicar ajuste →'}
+                        {adjustLoading ? (
+                          <svg width="14" height="14" viewBox="0 0 14 14" style={{ animation: 'spin 1s linear infinite' }}>
+                            <circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeDasharray="20" strokeDashoffset="8" strokeLinecap="round"/>
+                          </svg>
+                        ) : (
+                          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                            <path d="M2 7h10M8 3l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                        )}
                       </button>
                     </div>
+
+                    {adjustError && (
+                      <p style={{ fontSize: '12px', color: '#FF6B6B', marginTop: '8px' }}>{adjustError}</p>
+                    )}
+
+                    {adjustMessages.length > 0 && !pendingDietPlan && (
+                      <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.2)', marginTop: '8px', textAlign: 'center' }}>
+                        Puedes seguir refinando el plan o cerrar sin guardar
+                      </p>
+                    )}
                   </div>
                 )}
               </div>
