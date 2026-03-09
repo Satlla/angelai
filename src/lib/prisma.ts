@@ -1,7 +1,7 @@
 import { PrismaClient } from '../generated/prisma'
 import { PrismaPg } from '@prisma/adapter-pg'
 
-const connectionString = process.env.DIRECT_URL || process.env.DATABASE_URL!
+const connectionString = process.env.DATABASE_URL!
 
 const globalForPrisma = globalThis as unknown as { prisma: PrismaClient }
 
