@@ -720,6 +720,8 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
 
       <div style={{ maxWidth: '480px', margin: '0 auto', padding: '0 20px' }}>
 
+        {activeTab === 'overview' && (<>
+
         {/* User greeting */}
         <div style={{ padding: '28px 0 24px' }}>
           <h1 style={{ fontSize: '24px', fontWeight: 700, letterSpacing: '-0.8px', color: lightMode ? '#1a1a2e' : 'white' }}>
@@ -764,8 +766,6 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
             </button>
           </div>
         )}
-
-        {activeTab !== 'diet' && (<>
 
         {/* Stats row */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
