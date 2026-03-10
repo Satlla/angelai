@@ -10,7 +10,7 @@ export default async function Settings() {
   const [user, lastCheckIn, prefs] = await Promise.all([
     prisma.user.findUnique({
       where: { id: session.userId },
-      select: { email: true, name: true, age: true, sex: true },
+      select: { email: true, name: true, age: true, sex: true, profilePhotoUrl: true },
     }),
     prisma.checkIn.findFirst({
       where: { userId: session.userId },
@@ -28,6 +28,7 @@ export default async function Settings() {
   return (
     <SettingsClient
       email={user.email}
+      profilePhotoUrl={user.profilePhotoUrl || null}
       defaultName={user.name || ''}
       defaultAge={user.age ? String(user.age) : ''}
       defaultSex={user.sex || ''}

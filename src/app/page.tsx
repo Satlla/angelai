@@ -142,13 +142,12 @@ export default function Landing() {
         <div className="nav-desktop">
           <a href="/medallas" className="nav-link">Medallas</a>
           <a href="/legal/privacidad" className="nav-link">Legal</a>
-          <form onSubmit={handleSubmit} style={{ display: 'flex', gap: '8px' }}>
-            <input type="email" placeholder="tu@email.com" value={email} onChange={e => setEmail(e.target.value)}
-              className="nav-input" required />
-            <button type="submit" disabled={loading} className="nav-btn">
-              {loading ? '...' : 'Acceder'}
-            </button>
-          </form>
+          <button
+            onClick={() => document.querySelector('.hero-form')?.scrollIntoView({ behavior: 'smooth' })}
+            className="nav-btn"
+          >
+            Acceder
+          </button>
         </div>
 
         {/* Mobile hamburger */}

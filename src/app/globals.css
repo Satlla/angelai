@@ -393,3 +393,36 @@ body::before {
   background: rgba(180,79,255,0.1);
   border-color: rgba(180,79,255,0.45);
 }
+
+/* ── Light mode ── */
+[data-theme="light"] body {
+  background: #F5F5F7 !important;
+  color: #1a1a2e !important;
+}
+
+[data-theme="light"] .tab-bar {
+  background: rgba(245,245,247,0.97) !important;
+  border-top-color: rgba(0,0,0,0.08) !important;
+}
+
+[data-theme="light"] .tab-bar button {
+  color: rgba(0,0,0,0.35) !important;
+}
+
+[data-theme="light"] .tab-bar button[style*="color: #B44FFF"],
+[data-theme="light"] .tab-bar button[style*="color: rgb(180, 79, 255)"] {
+  color: #B44FFF !important;
+}
+
+[data-theme="light"] .separator {
+  background: rgba(0,0,0,0.08) !important;
+}
+
+[data-theme="light"] .progress-bar {
+  background: rgba(0,0,0,0.08) !important;
+}
+
+[data-theme="light"] .card {
+  background: #fff !important;
+  border-color: rgba(0,0,0,0.08) !important;
+}

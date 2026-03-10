@@ -34,7 +34,7 @@ export default async function Dashboard() {
 
   return (
     <DashboardClient
-      user={{ id: user.id, email: user.email, name: user.name }}
+      user={{ id: user.id, email: user.email, name: user.name, profilePhotoUrl: user.profilePhotoUrl }}
       checkIns={checkIns.map((c: typeof checkIns[0]) => ({
         id: c.id,
         createdAt: c.createdAt.toISOString(),

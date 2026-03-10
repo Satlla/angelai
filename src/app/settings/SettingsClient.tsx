@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 
 
@@ -12,12 +12,13 @@ const ACTIVITY_OPTIONS = [
 ]
 
 export default function SettingsClient({
-  email, defaultName, defaultAge, defaultSex,
+  email, profilePhotoUrl: initialPhotoUrl, defaultName, defaultAge, defaultSex,
   height: initialHeight, activityLevel: initialActivityLevel,
   dietNotes: initialDietNotes,
   weeklyEmailEnabled: initialWeeklyEmail,
 }: {
   email: string
+  profilePhotoUrl: string | null
   defaultName: string
   defaultAge: string
   defaultSex: string
@@ -36,7 +37,28 @@ export default function SettingsClient({
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState('')
+  const [profilePhoto, setProfilePhoto] = useState<string | null>(initialPhotoUrl)
+  const [photoUploading, setPhotoUploading] = useState(false)
+  const photoInputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
+
+  async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setPhotoUploading(true)
+    const form = new FormData()
+    form.append('photo', file)
+    try {
+      const res = await fetch('/api/profile/photo', { method: 'POST', body: form })
+      if (res.ok) {
+        const data = await res.json()
+        setProfilePhoto(data.url)
+      }
+    } finally {
+      setPhotoUploading(false)
+      e.target.value = ''
+    }
+  }
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
@@ -105,6 +127,40 @@ export default function SettingsClient({
       </div>
 
       <form onSubmit={handleSave} style={{ maxWidth: '480px', margin: '0 auto', padding: '32px 20px 48px' }}>
+
+        {/* Foto de perfil */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '32px', gap: '12px' }}>
+          <button
+            type="button"
+            onClick={() => photoInputRef.current?.click()}
+            style={{
+              width: '80px', height: '80px', borderRadius: '50%',
+              background: 'rgba(255,255,255,0.06)', border: '2px dashed rgba(180,79,255,0.4)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', overflow: 'hidden', padding: 0, position: 'relative',
+            }}
+          >
+            {profilePhoto ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={profilePhoto} alt="Perfil" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : (
+              <span style={{ fontSize: '24px', fontWeight: 800, color: 'rgba(255,255,255,0.35)', letterSpacing: '-1px' }}>
+                {(name || email).slice(0, 2).toUpperCase()}
+              </span>
+            )}
+            {photoUploading && (
+              <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg width="20" height="20" viewBox="0 0 20 20" style={{ animation: 'spin 1s linear infinite' }}>
+                  <circle cx="10" cy="10" r="8" fill="none" stroke="white" strokeWidth="2" strokeDasharray="40" strokeDashoffset="15" strokeLinecap="round"/>
+                </svg>
+              </div>
+            )}
+          </button>
+          <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.3)', margin: 0 }}>
+            Toca para cambiar foto
+          </p>
+          <input ref={photoInputRef} type="file" accept="image/*" onChange={handlePhotoUpload} style={{ display: 'none' }} />
+        </div>
 
         {/* Email — solo lectura */}
         <div style={{

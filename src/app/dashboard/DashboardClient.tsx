@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip,
@@ -96,7 +96,7 @@ type UserPreferences = {
 }
 
 export default function DashboardClient({ user, checkIns, badges, daysLeft, preferences: initialPrefs }: {
-  user: { id: string; email: string; name: string | null }
+  user: { id: string; email: string; name: string | null; profilePhotoUrl?: string | null }
   checkIns: CheckIn[]
   badges: { badge: string; earnedAt: string }[]
   daysLeft: number
@@ -130,7 +130,20 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
   const [adjustMessages, setAdjustMessages] = useState<Array<{role: 'user'|'assistant', content: string}>>([])
   const [pendingDietPlan, setDietPlan] = useState<object | null>(null)
   const [swapInput, setSwapInput] = useState('')
+  const [lightMode, setLightMode] = useState(false)
+  const [profilePhoto, setProfilePhoto] = useState<string | null>(user.profilePhotoUrl ?? null)
+  const photoInputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
+
+  useEffect(() => {
+    const saved = localStorage.getItem('angelai_theme')
+    if (saved === 'light') setLightMode(true)
+  }, [])
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', lightMode ? 'light' : 'dark')
+    localStorage.setItem('angelai_theme', lightMode ? 'light' : 'dark')
+  }, [lightMode])
 
   async function savePreferences(updated: UserPreferences) {
     setPrefsSaving(true)
@@ -199,6 +212,19 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
   async function handleLogout() {
     await fetch('/api/auth/logout', { method: 'POST' })
     router.push('/')
+  }
+
+  async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const form = new FormData()
+    form.append('photo', file)
+    const res = await fetch('/api/profile/photo', { method: 'POST', body: form })
+    if (res.ok) {
+      const data = await res.json()
+      setProfilePhoto(data.url)
+    }
+    e.target.value = ''
   }
 
   async function sendAdjustMessage() {
@@ -619,38 +645,69 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#07080F', paddingBottom: '80px' }}>
+    <div style={{ minHeight: '100vh', background: lightMode ? '#F5F5F7' : '#07080F', paddingBottom: '80px', color: lightMode ? '#1a1a2e' : 'white' }}>
 
       {/* Top nav */}
       <nav style={{
         position: 'sticky', top: 0, zIndex: 100,
-        background: 'rgba(7,8,15,0.94)', backdropFilter: 'blur(20px)',
-        borderBottom: '1px solid rgba(255,255,255,0.05)',
+        background: lightMode ? 'rgba(245,245,247,0.94)' : 'rgba(7,8,15,0.94)', backdropFilter: 'blur(20px)',
+        borderBottom: `1px solid ${lightMode ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.05)'}`,
       }}>
         <div style={{
           maxWidth: '480px', margin: '0 auto', padding: '14px 20px',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         }}>
           <Logo />
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            {/* Toggle light/dark mode */}
             <button
-              onClick={() => router.push('/settings')}
+              onClick={() => setLightMode(!lightMode)}
+              title={lightMode ? 'Modo oscuro' : 'Modo claro'}
               style={{
                 width: '30px', height: '30px', borderRadius: '8px',
-                background: 'rgba(255,255,255,0.05)', border: 'none',
+                background: lightMode ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.05)', border: 'none',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer', color: 'rgba(255,255,255,0.35)',
+                cursor: 'pointer', color: lightMode ? 'rgba(0,0,0,0.45)' : 'rgba(255,255,255,0.35)',
               }}
             >
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                <circle cx="7" cy="7" r="2" stroke="currentColor" strokeWidth="1.2"/>
-                <path d="M7 1v1M7 12v1M1 7h1M12 7h1M2.6 2.6l.7.7M10.7 10.7l.7.7M10.7 3.3l-.7.7M3.3 10.7l-.7.7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-              </svg>
+              {lightMode ? (
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                  <path d="M7 1C3.7 1 1 3.7 1 7s2.7 6 6 6c2.5 0 4.6-1.5 5.5-3.7-.5.1-1 .2-1.5.2C7.8 9.5 5.5 7.2 5.5 4.5c0-.5.1-1 .2-1.5C4 3.7 3 5.2 3 7c0 2.2 1.8 4 4 4s4-1.8 4-4a4 4 0 0 0-.3-1.5A6 6 0 0 1 7 1z" fill="currentColor"/>
+                </svg>
+              ) : (
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                  <circle cx="7" cy="7" r="2" stroke="currentColor" strokeWidth="1.2"/>
+                  <path d="M7 1v1M7 12v1M1 7h1M12 7h1M2.6 2.6l.7.7M10.7 10.7l.7.7M10.7 3.3l-.7.7M3.3 10.7l-.7.7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                </svg>
+              )}
             </button>
+
+            {/* Avatar → perfil */}
+            <button
+              onClick={() => router.push('/settings')}
+              title="Mi perfil"
+              style={{
+                width: '32px', height: '32px', borderRadius: '50%',
+                background: lightMode ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.08)',
+                border: `2px solid ${lightMode ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.12)'}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer', overflow: 'hidden', padding: 0, flexShrink: 0,
+              }}
+            >
+              {profilePhoto ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={profilePhoto} alt="Perfil" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : (
+                <span style={{ fontSize: '12px', fontWeight: 700, color: lightMode ? 'rgba(0,0,0,0.45)' : 'rgba(255,255,255,0.45)', letterSpacing: '-0.5px' }}>
+                  {(user.name || user.email).slice(0, 2).toUpperCase()}
+                </span>
+              )}
+            </button>
+
             <button
               onClick={handleLogout}
               style={{
-                fontSize: '12px', color: 'rgba(255,255,255,0.25)',
+                fontSize: '12px', color: lightMode ? 'rgba(0,0,0,0.35)' : 'rgba(255,255,255,0.25)',
                 background: 'none', border: 'none', cursor: 'pointer',
                 fontFamily: 'inherit', padding: '4px 0', letterSpacing: '0.2px',
               }}
@@ -665,10 +722,7 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
 
         {/* User greeting */}
         <div style={{ padding: '28px 0 24px' }}>
-          <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.28)', marginBottom: '4px' }}>
-            {user.email}
-          </p>
-          <h1 style={{ fontSize: '24px', fontWeight: 700, letterSpacing: '-0.8px' }}>
+          <h1 style={{ fontSize: '24px', fontWeight: 700, letterSpacing: '-0.8px', color: lightMode ? '#1a1a2e' : 'white' }}>
             Tu progreso
           </h1>
         </div>
@@ -710,6 +764,8 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
             </button>
           </div>
         )}
+
+        {activeTab !== 'diet' && (<>
 
         {/* Stats row */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
@@ -831,6 +887,8 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
         )}
 
         <div className="separator" style={{ marginBottom: '24px' }} />
+
+        </>)}
 
         {/* ── TAB: OVERVIEW ── */}
         {activeTab === 'overview' && dietData && (
