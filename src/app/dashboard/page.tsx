@@ -10,7 +10,7 @@ export default async function Dashboard() {
   const user = await prisma.user.findUnique({ where: { id: session.userId } })
   if (!user) redirect('/')
 
-  const [checkIns, badges, preferences] = await Promise.all([
+  const [checkIns, badges, preferences, todayLog] = await Promise.all([
     prisma.checkIn.findMany({
       where: { userId: user.id },
       orderBy: { createdAt: 'desc' },
@@ -23,6 +23,7 @@ export default async function Dashboard() {
     }),
     prisma.userBadge.findMany({ where: { userId: user.id } }),
     prisma.userPreferences.findUnique({ where: { userId: user.id } }),
+    prisma.dailyLog.findFirst({ where: { userId: user.id, date: { gte: new Date(new Date().setHours(0,0,0,0)) } } }),
   ])
 
   if (checkIns.length === 0) redirect('/onboarding')
@@ -52,6 +53,8 @@ export default async function Dashboard() {
       }))}
       badges={badges.map((b: typeof badges[0]) => ({ badge: b.badge, earnedAt: b.earnedAt.toISOString() }))}
       daysLeft={daysLeft}
+      dailyReminderEnabled={preferences?.dailyReminderEnabled ?? true}
+      hasLoggedToday={!!todayLog}
       preferences={{
         trainingDays: preferences?.trainingDays ?? null,
         cardioTime: preferences?.cardioTime ?? null,

@@ -1,6 +1,6 @@
 'use client'
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 
 // ─── Medal SVG icons ──────────────────────────────────────────────────────────
 function MedalSvgInicio() {
@@ -104,12 +104,14 @@ const FEATURES = [
   { svg: <SvgDumbbell />, title: 'Entrenamiento a tu medida', desc: 'Adaptado a tu equipamiento, días disponibles y ejercicios favoritos.' },
 ]
 
-export default function Landing() {
+function Landing() {
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [menuOpen, setMenuOpen] = useState(false)
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const inviteToken = searchParams.get('token')
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -120,7 +122,7 @@ export default function Landing() {
       const res = await fetch('/api/auth', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, ...(inviteToken ? { inviteToken } : {}) }),
       })
       const data = await res.json()
       if (!res.ok) { setError(data.error || 'Email no autorizado'); setLoading(false); return }
@@ -206,6 +208,19 @@ export default function Landing() {
               <strong style={{ color: 'rgba(255,255,255,0.85)' }}>gramos exactos</strong> de cada alimento. Cada 15 días revisamos tu evolución. Cada noche, 30 segundos para que la IA mida tu disciplina real.
             </p>
             <div className="hero-form-wrap">
+              {inviteToken && (
+                <div style={{
+                  background: 'rgba(180,79,255,0.08)', border: '1px solid rgba(180,79,255,0.25)',
+                  borderRadius: '14px', padding: '14px 18px', marginBottom: '16px',
+                  display: 'flex', alignItems: 'center', gap: '12px'
+                }}>
+                  <span style={{ fontSize: '20px' }}>✉️</span>
+                  <div>
+                    <p style={{ fontSize: '14px', fontWeight: 700, color: 'rgba(180,79,255,0.9)', marginBottom: '2px' }}>Has sido invitado</p>
+                    <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)' }}>Introduce tu email para activar tu acceso exclusivo.</p>
+                  </div>
+                </div>
+              )}
               <form onSubmit={handleSubmit} className="hero-form">
                 <input type="email" placeholder="tu@email.com" value={email} onChange={e => setEmail(e.target.value)}
                   className="input-field" style={{ fontSize: '16px', padding: '15px 18px' }} required />
@@ -490,6 +505,14 @@ export default function Landing() {
         }
       `}</style>
     </div>
+  )
+}
+
+export default function LandingPage() {
+  return (
+    <Suspense fallback={<div style={{ minHeight: '100vh', background: '#07080F' }} />}>
+      <Landing />
+    </Suspense>
   )
 }
 

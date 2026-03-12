@@ -92,11 +92,14 @@ Responde SIEMPRE con este JSON exacto (sin markdown):
   const jsonMatch = text.match(/\{[\s\S]*\}/)
   if (!jsonMatch) return NextResponse.json({ error: 'Error al procesar la respuesta' }, { status: 500 })
 
-  const result = JSON.parse(jsonMatch[0])
-
-  return NextResponse.json({
-    reply: result.reply,
-    diet: result.diet,
-    mealCalories: result.mealCalories,
-  })
+  try {
+    const result = JSON.parse(jsonMatch[0])
+    return NextResponse.json({
+      reply: result.reply,
+      diet: result.diet,
+      mealCalories: result.mealCalories,
+    })
+  } catch {
+    return NextResponse.json({ error: 'Error al procesar la respuesta' }, { status: 500 })
+  }
 }

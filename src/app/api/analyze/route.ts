@@ -496,16 +496,27 @@ Responde ÚNICAMENTE con este JSON exacto (sin markdown, sin texto adicional):
         const jsonMatch = accumulated.match(/\{[\s\S]*\}/)
         if (!jsonMatch) throw new Error('No se pudo parsear la respuesta de la IA')
 
-        const result = JSON.parse(jsonMatch[0])
+        let result: Record<string, unknown>
+        try {
+          result = JSON.parse(jsonMatch[0])
+        } catch {
+          throw new Error('La IA devolvió un JSON inválido')
+        }
 
-        // Apply macro correction
+        // Apply macro correction (calories, protein, carbs, fat)
         if (macros) {
           const tolerance = 0.08
-          if (Math.abs(result.calories - macros.calories) / macros.calories > tolerance) {
+          if (Math.abs((result.calories as number) - macros.calories) / macros.calories > tolerance) {
             result.calories = macros.calories
           }
-          if (Math.abs(result.protein - macros.protein) / macros.protein > tolerance) {
+          if (Math.abs((result.protein as number) - macros.protein) / macros.protein > tolerance) {
             result.protein = macros.protein
+          }
+          if (macros.carbs > 0 && Math.abs((result.carbs as number) - macros.carbs) / macros.carbs > tolerance) {
+            result.carbs = macros.carbs
+          }
+          if (macros.fat > 0 && Math.abs((result.fat as number) - macros.fat) / macros.fat > tolerance) {
+            result.fat = macros.fat
           }
         }
 
@@ -533,16 +544,16 @@ Responde ÚNICAMENTE con este JSON exacto (sin markdown, sin texto adicional):
             frontPhotoUrl: frontPhotoUrl || null,
             sidePhotoUrl: sidePhotoUrl || null,
             photoExpiresAt: frontPhotoUrl ? photoExpires : null,
-            bodyScore: result.bodyScore,
-            rank: result.rank,
-            analysis: result.analysis,
+            bodyScore: typeof result.bodyScore === 'number' ? result.bodyScore : null,
+            rank: typeof result.rank === 'string' ? result.rank : null,
+            analysis: typeof result.analysis === 'string' ? result.analysis : null,
             dietPlan: JSON.stringify(result),
           },
         })
 
         // Badges
         const allCheckIns = await prisma.checkIn.count({ where: { userId: session.userId } })
-        const badgesToAdd: string[] = result.badges || []
+        const badgesToAdd: string[] = Array.isArray(result.badges) ? result.badges as string[] : []
         if (allCheckIns === 1) badgesToAdd.push('primer_paso')
         if (allCheckIns === 3) badgesToAdd.push('sin_rendirse')
         if (allCheckIns === 6) badgesToAdd.push('constancia')

@@ -95,12 +95,14 @@ type UserPreferences = {
   dietNotes: string | null
 }
 
-export default function DashboardClient({ user, checkIns, badges, daysLeft, preferences: initialPrefs }: {
+export default function DashboardClient({ user, checkIns, badges, daysLeft, preferences: initialPrefs, dailyReminderEnabled, hasLoggedToday }: {
   user: { id: string; email: string; name: string | null; profilePhotoUrl?: string | null }
   checkIns: CheckIn[]
   badges: { badge: string; earnedAt: string }[]
   daysLeft: number
   preferences: UserPreferences
+  dailyReminderEnabled: boolean
+  hasLoggedToday: boolean
 }) {
   const [activeTab, setActiveTab] = useState<Tab>('overview')
   const [pdfLoading, setPdfLoading] = useState(false)
@@ -132,6 +134,7 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
   const [swapInput, setSwapInput] = useState('')
   const [lightMode, setLightMode] = useState(false)
   const [profilePhoto, setProfilePhoto] = useState<string | null>(user.profilePhotoUrl ?? null)
+  const [showDailyReminder, setShowDailyReminder] = useState(false)
   const photoInputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
 
@@ -144,6 +147,17 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
     document.documentElement.setAttribute('data-theme', lightMode ? 'light' : 'dark')
     localStorage.setItem('angelai_theme', lightMode ? 'light' : 'dark')
   }, [lightMode])
+
+  useEffect(() => {
+    if (!dailyReminderEnabled || hasLoggedToday) return
+    const hour = new Date().getHours()
+    if (hour >= 22) {
+      const dismissedKey = `reminder_dismissed_${new Date().toDateString()}`
+      if (!localStorage.getItem(dismissedKey)) {
+        setShowDailyReminder(true)
+      }
+    }
+  }, [dailyReminderEnabled, hasLoggedToday])
 
   async function savePreferences(updated: UserPreferences) {
     setPrefsSaving(true)
@@ -717,6 +731,55 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
           </div>
         </div>
       </nav>
+
+      {/* Daily reminder banner */}
+      {showDailyReminder && (
+        <div style={{
+          position: 'fixed', bottom: '80px', left: '50%', transform: 'translateX(-50%)',
+          width: 'calc(100% - 40px)', maxWidth: '440px', zIndex: 200,
+          background: 'linear-gradient(135deg, #1a0a2e 0%, #0d0d1a 100%)',
+          border: '1px solid rgba(180,79,255,0.35)',
+          borderRadius: '16px', padding: '16px 18px',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(180,79,255,0.1)',
+          display: 'flex', alignItems: 'center', gap: '12px',
+        }}>
+          <span style={{ fontSize: '24px', flexShrink: 0 }}>🌙</span>
+          <div style={{ flex: 1 }}>
+            <p style={{ fontSize: '14px', fontWeight: 600, color: 'white', marginBottom: '2px' }}>
+              ¿Cómo ha ido el día?
+            </p>
+            <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.45)' }}>
+              Registra tu seguimiento de hoy
+            </p>
+          </div>
+          <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+            <button
+              onClick={() => {
+                const key = `reminder_dismissed_${new Date().toDateString()}`
+                localStorage.setItem(key, '1')
+                setShowDailyReminder(false)
+              }}
+              style={{
+                background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: '8px',
+                color: 'rgba(255,255,255,0.4)', fontSize: '12px', padding: '6px 10px',
+                cursor: 'pointer', fontFamily: 'inherit',
+              }}
+            >
+              Luego
+            </button>
+            <button
+              onClick={() => router.push('/daily')}
+              style={{
+                background: '#B44FFF', border: 'none', borderRadius: '8px',
+                color: 'white', fontSize: '12px', fontWeight: 600, padding: '6px 12px',
+                cursor: 'pointer', fontFamily: 'inherit',
+              }}
+            >
+              Registrar
+            </button>
+          </div>
+        </div>
+      )}
 
       <div style={{ maxWidth: '480px', margin: '0 auto', padding: '0 20px' }}>
 
@@ -1792,53 +1855,25 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
 
         {/* ── TAB: HISTORY ── */}
         {activeTab === 'history' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {checkIns.map((c, i) => (
-              <div key={c.id} style={{
-                background: '#0C0D16', border: '1px solid rgba(255,255,255,0.06)',
-                borderRadius: '14px', padding: '16px 20px',
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              }}>
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                    <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.28)' }}>
-                      {new Date(c.createdAt).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
-                    </span>
-                    {i === 0 && (
-                      <span style={{
-                        fontSize: '9px', letterSpacing: '1px', fontWeight: 700, color: '#B44FFF',
-                        textTransform: 'uppercase', background: 'rgba(180,79,255,0.1)',
-                        padding: '2px 7px', borderRadius: '3px',
-                      }}>Último</span>
-                    )}
-                  </div>
-                  <span style={{ fontSize: '17px', fontWeight: 700 }}>{c.weight} kg</span>
-                  {i > 0 && (() => {
-                    const diff = (c.weight - checkIns[i - 1].weight).toFixed(1)
-                    return (
-                      <span style={{
-                        fontSize: '12px', fontWeight: 600, marginLeft: '8px',
-                        color: parseFloat(diff) < 0 ? '#00D9F5' : '#FF6B6B',
-                      }}>
-                        {parseFloat(diff) < 0 ? '' : '+'}{diff} kg
-                      </span>
-                    )
-                  })()}
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: '22px', fontWeight: 800, letterSpacing: '-1px', marginBottom: '2px' }}>
-                    {c.bodyScore || '—'}
-                  </div>
-                  <div style={{
-                    fontSize: '10px', fontWeight: 700, letterSpacing: '1px',
-                    textTransform: 'uppercase',
-                    color: RANK_COLORS[c.rank || ''] || 'rgba(255,255,255,0.3)',
-                  }}>
-                    {c.rank || '—'}
-                  </div>
-                </div>
-              </div>
-            ))}
+          <div style={{ paddingTop: '24px', paddingBottom: '24px' }}>
+            <h2 style={{ fontSize: '20px', fontWeight: 700, letterSpacing: '-0.5px', marginBottom: '16px', color: lightMode ? '#1a1a2e' : 'white' }}>
+              Historial de revisiones
+            </h2>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {checkIns.map((c, i) => {
+                const plan: DietPlan | null = c.dietPlan ? (() => { try { return JSON.parse(c.dietPlan!) } catch { return null } })() : null
+                return (
+                  <HistoryCard
+                    key={c.id}
+                    checkIn={c}
+                    plan={plan}
+                    prev={checkIns[i + 1] ?? null}
+                    isLatest={i === 0}
+                    lightMode={lightMode}
+                  />
+                )
+              })}
+            </div>
           </div>
         )}
       </div>
@@ -1874,6 +1909,122 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
           })}
         </div>
       </div>
+    </div>
+  )
+}
+
+function HistoryCard({ checkIn, plan, prev, isLatest, lightMode }: {
+  checkIn: CheckIn
+  plan: DietPlan | null
+  prev: CheckIn | null
+  isLatest: boolean
+  lightMode: boolean
+}) {
+  const [open, setOpen] = useState(false)
+  const weightDiff = prev ? (checkIn.weight - prev.weight) : null
+
+  return (
+    <div style={{
+      background: lightMode ? '#fff' : '#0C0D16',
+      border: `1px solid ${isLatest ? 'rgba(180,79,255,0.25)' : 'rgba(255,255,255,0.06)'}`,
+      borderRadius: '14px', overflow: 'hidden',
+    }}>
+      {/* Header row */}
+      <div
+        onClick={() => setOpen(!open)}
+        style={{ padding: '16px 20px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+      >
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+            <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.28)' }}>
+              {new Date(checkIn.createdAt).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
+            </span>
+            {isLatest && (
+              <span style={{
+                fontSize: '9px', letterSpacing: '1px', fontWeight: 700, color: '#B44FFF',
+                textTransform: 'uppercase', background: 'rgba(180,79,255,0.1)',
+                padding: '2px 7px', borderRadius: '3px',
+              }}>Actual</span>
+            )}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+            <span style={{ fontSize: '18px', fontWeight: 700, color: lightMode ? '#1a1a2e' : 'white' }}>{checkIn.weight} kg</span>
+            {weightDiff !== null && (
+              <span style={{ fontSize: '12px', fontWeight: 600, color: weightDiff < 0 ? '#00D9F5' : '#FF6B6B' }}>
+                {weightDiff < 0 ? '' : '+'}{weightDiff.toFixed(1)} kg
+              </span>
+            )}
+          </div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: '22px', fontWeight: 800, letterSpacing: '-1px', color: lightMode ? '#1a1a2e' : 'white' }}>
+              {checkIn.bodyScore || '—'}
+            </div>
+            <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', color: RANK_COLORS[checkIn.rank || ''] || 'rgba(255,255,255,0.3)' }}>
+              {checkIn.rank || '—'}
+            </div>
+          </div>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', opacity: 0.35 }}>
+            <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </div>
+      </div>
+
+      {/* Expanded details */}
+      {open && plan && (
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+
+          {/* Macros */}
+          <div>
+            <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600, marginBottom: '10px' }}>Macros</p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
+              {[
+                { label: 'Kcal', value: plan.calories },
+                { label: 'Prot', value: `${plan.protein}g` },
+                { label: 'HC', value: `${plan.carbs}g` },
+                { label: 'Gras', value: `${plan.fat}g` },
+              ].map(m => (
+                <div key={m.label} style={{ background: 'rgba(255,255,255,0.04)', borderRadius: '8px', padding: '8px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '15px', fontWeight: 700, color: 'white' }}>{m.value}</div>
+                  <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.3)', marginTop: '2px' }}>{m.label}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Progress summary */}
+          {plan.progressSummary && (
+            <div>
+              <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600, marginBottom: '6px' }}>Análisis</p>
+              <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.55)', lineHeight: 1.6 }}>{plan.progressSummary}</p>
+            </div>
+          )}
+
+          {/* Training summary */}
+          {plan.training && (
+            <div>
+              <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600, marginBottom: '6px' }}>Entrenamiento</p>
+              <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.55)' }}>
+                {plan.training.dias} días/semana · {plan.training.tipo}
+              </p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '6px' }}>
+                {plan.training.rutina?.map(d => (
+                  <span key={d.dia} style={{ fontSize: '11px', background: 'rgba(180,79,255,0.1)', color: '#B44FFF', padding: '3px 8px', borderRadius: '4px', fontWeight: 600 }}>
+                    {d.nombre}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {open && !plan && (
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', padding: '16px 20px' }}>
+          <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.28)' }}>Plan no disponible para esta revisión.</p>
+        </div>
+      )}
     </div>
   )
 }

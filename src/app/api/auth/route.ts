@@ -9,13 +9,21 @@ export async function POST(req: NextRequest) {
     const allowed = (process.env.ALLOWED_EMAILS || process.env.ALLOWED_EMAIL || '')
       .split(',').map(e => e.trim().toLowerCase()).filter(Boolean)
 
-    if (!email || !allowed.includes(email.toLowerCase())) {
-      return NextResponse.json({ error: 'Email no autorizado. Esta plataforma es de acceso privado.' }, { status: 401 })
-    }
-
     let user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } })
 
+    // If user already exists (created via invite or allowlist) — let them in
     if (!user) {
+      // Not in DB yet — check allowlist or pending invite
+      if (!allowed.includes(email.toLowerCase())) {
+        const pendingInvite = await prisma.pendingInvite.findFirst({
+          where: { inviteeEmail: email.toLowerCase(), usedAt: null },
+        })
+        if (!pendingInvite) {
+          return NextResponse.json({ error: 'Necesitas una invitación para acceder.' }, { status: 401 })
+        }
+        // Mark invite as used
+        await prisma.pendingInvite.update({ where: { id: pendingInvite.id }, data: { usedAt: new Date() } })
+      }
       user = await prisma.user.create({ data: { email: email.toLowerCase() } })
     }
 

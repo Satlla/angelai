@@ -128,22 +128,36 @@ Responde ÚNICAMENTE con este JSON (sin markdown):
 
   const text = response.content[0].type === 'text' ? response.content[0].text : ''
   const jsonMatch = text.match(/\{[\s\S]*\}/)
-  if (!jsonMatch) throw new Error('No se pudo parsear respuesta')
+  if (!jsonMatch) return NextResponse.json({ error: 'Error al procesar la respuesta de IA' }, { status: 500 })
 
-  const result = JSON.parse(jsonMatch[0])
-
-  // Guardar el plan actualizado en el check-in
-  const updatedPlan = {
-    ...currentPlan,
-    diet: result.diet,
-    mealCalories: result.mealCalories,
-    lastCustomization: result.changes,
+  let result: { changes: string; diet: unknown; mealCalories: unknown }
+  try {
+    result = JSON.parse(jsonMatch[0])
+  } catch {
+    return NextResponse.json({ error: 'Error al procesar la respuesta de IA' }, { status: 500 })
   }
 
-  await prisma.checkIn.update({
-    where: { id: checkIn.id },
-    data: { dietPlan: JSON.stringify(updatedPlan), customizationUsed: true },
+  // Use a transaction to atomically check and set customizationUsed (prevents race conditions)
+  const updatedCheckIn = await prisma.$transaction(async (tx) => {
+    const fresh = await tx.checkIn.findUnique({ where: { id: checkIn.id }, select: { customizationUsed: true } })
+    if (fresh?.customizationUsed) return null
+
+    const updatedPlan = {
+      ...currentPlan,
+      diet: result.diet,
+      mealCalories: result.mealCalories,
+      lastCustomization: result.changes,
+    }
+
+    return tx.checkIn.update({
+      where: { id: checkIn.id },
+      data: { dietPlan: JSON.stringify(updatedPlan), customizationUsed: true },
+    })
   })
+
+  if (!updatedCheckIn) {
+    return NextResponse.json({ error: 'Ya usaste tu ajuste para este ciclo.', limitReached: true }, { status: 403 })
+  }
 
   return NextResponse.json({ ok: true, changes: result.changes, diet: result.diet, mealCalories: result.mealCalories })
 }

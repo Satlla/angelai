@@ -19,7 +19,7 @@ export default async function Settings() {
     }),
     prisma.userPreferences.findUnique({
       where: { userId: session.userId },
-      select: { dietNotes: true, weeklyEmailEnabled: true, height: true, activityLevel: true },
+      select: { dietNotes: true, weeklyEmailEnabled: true, dailyReminderEnabled: true, height: true, activityLevel: true },
     }),
   ])
 
@@ -36,6 +36,7 @@ export default async function Settings() {
       activityLevel={prefs?.activityLevel ?? lastCheckIn?.activityLevel ?? null}
       dietNotes={prefs?.dietNotes || ''}
       weeklyEmailEnabled={prefs?.weeklyEmailEnabled ?? true}
+      dailyReminderEnabled={prefs?.dailyReminderEnabled ?? true}
     />
   )
 }

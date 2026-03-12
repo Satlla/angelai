@@ -13,6 +13,7 @@ const PreferencesSchema = z.object({
   dietNotes: z.string().max(500).optional(),
   freeTextContext: z.string().max(2000).optional(),
   weeklyEmailEnabled: z.boolean().optional(),
+  dailyReminderEnabled: z.boolean().optional(),
   height: z.number().min(100).max(250).optional(),
   activityLevel: z.enum(['sedentario', 'ligero', 'moderado', 'activo', 'atletico']).optional(),
 })
@@ -36,7 +37,7 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) {
     return NextResponse.json({ error: 'Datos inválidos', details: parsed.error.flatten().fieldErrors }, { status: 400 })
   }
-  const { trainingDays, cardioTime, equipment, likedExercises, dislikedExercises, trainingNotes, dietNotes, freeTextContext, weeklyEmailEnabled, height, activityLevel } = parsed.data
+  const { trainingDays, cardioTime, equipment, likedExercises, dislikedExercises, trainingNotes, dietNotes, freeTextContext, weeklyEmailEnabled, dailyReminderEnabled, height, activityLevel } = parsed.data
 
   const prefs = await prisma.userPreferences.upsert({
     where: { userId: session.userId },
@@ -50,6 +51,7 @@ export async function POST(req: NextRequest) {
       dietNotes: dietNotes ?? undefined,
       freeTextContext: freeTextContext ?? undefined,
       weeklyEmailEnabled: weeklyEmailEnabled ?? undefined,
+      dailyReminderEnabled: dailyReminderEnabled ?? undefined,
       height: height ?? undefined,
       activityLevel: activityLevel ?? undefined,
     },
@@ -64,6 +66,7 @@ export async function POST(req: NextRequest) {
       dietNotes: dietNotes ?? null,
       freeTextContext: freeTextContext ?? null,
       weeklyEmailEnabled: weeklyEmailEnabled ?? true,
+      dailyReminderEnabled: dailyReminderEnabled ?? true,
       height: height ?? null,
       activityLevel: activityLevel ?? null,
     },

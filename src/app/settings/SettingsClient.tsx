@@ -16,6 +16,7 @@ export default function SettingsClient({
   height: initialHeight, activityLevel: initialActivityLevel,
   dietNotes: initialDietNotes,
   weeklyEmailEnabled: initialWeeklyEmail,
+  dailyReminderEnabled: initialDailyReminder,
 }: {
   email: string
   profilePhotoUrl: string | null
@@ -26,6 +27,7 @@ export default function SettingsClient({
   activityLevel: string | null
   dietNotes: string
   weeklyEmailEnabled: boolean
+  dailyReminderEnabled: boolean
 }) {
   const [name, setName] = useState(defaultName)
   const [age, setAge] = useState(defaultAge)
@@ -34,6 +36,7 @@ export default function SettingsClient({
   const [activityLevel, setActivityLevel] = useState(initialActivityLevel || '')
   const [dietNotes, setDietNotes] = useState(initialDietNotes)
   const [weeklyEmailEnabled, setWeeklyEmailEnabled] = useState(initialWeeklyEmail)
+  const [dailyReminderEnabled, setDailyReminderEnabled] = useState(initialDailyReminder)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState('')
@@ -79,6 +82,7 @@ export default function SettingsClient({
           body: JSON.stringify({
             dietNotes,
             weeklyEmailEnabled,
+            dailyReminderEnabled,
             ...(height ? { height: parseFloat(height) } : {}),
             ...(activityLevel ? { activityLevel } : {}),
           }),
@@ -279,37 +283,77 @@ export default function SettingsClient({
           />
         </div>
 
-        {/* Toggle email semanal */}
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)',
-          borderRadius: '12px', padding: '14px 16px', marginBottom: '32px',
-        }}>
-          <div>
-            <p style={{ fontSize: '14px', fontWeight: 500, color: 'rgba(255,255,255,0.75)', marginBottom: '2px' }}>
-              Resumen semanal por email
-            </p>
-            <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.3)' }}>
-              Cada lunes recibes un resumen de tu semana
-            </p>
+        {/* Notificaciones */}
+        <div style={{ marginBottom: '32px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.35)', fontWeight: 500, marginBottom: '4px', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+            Notificaciones
+          </p>
+
+          {/* Toggle email semanal */}
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: '12px', padding: '14px 16px',
+          }}>
+            <div>
+              <p style={{ fontSize: '14px', fontWeight: 500, color: 'rgba(255,255,255,0.75)', marginBottom: '2px' }}>
+                Resumen semanal por email
+              </p>
+              <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.3)' }}>
+                Cada lunes recibes un resumen de tu semana
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setWeeklyEmailEnabled(!weeklyEmailEnabled)}
+              style={{
+                width: '44px', height: '24px', borderRadius: '12px', border: 'none',
+                background: weeklyEmailEnabled ? '#B44FFF' : 'rgba(255,255,255,0.12)',
+                cursor: 'pointer', position: 'relative', flexShrink: 0,
+                transition: 'background 0.2s ease',
+              }}
+            >
+              <span style={{
+                position: 'absolute', top: '2px',
+                left: weeklyEmailEnabled ? '22px' : '2px',
+                width: '20px', height: '20px', borderRadius: '50%',
+                background: 'white', transition: 'left 0.2s ease',
+              }} />
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={() => setWeeklyEmailEnabled(!weeklyEmailEnabled)}
-            style={{
-              width: '44px', height: '24px', borderRadius: '12px', border: 'none',
-              background: weeklyEmailEnabled ? '#B44FFF' : 'rgba(255,255,255,0.12)',
-              cursor: 'pointer', position: 'relative', flexShrink: 0,
-              transition: 'background 0.2s ease',
-            }}
-          >
-            <span style={{
-              position: 'absolute', top: '2px',
-              left: weeklyEmailEnabled ? '22px' : '2px',
-              width: '20px', height: '20px', borderRadius: '50%',
-              background: 'white', transition: 'left 0.2s ease',
-            }} />
-          </button>
+
+          {/* Toggle recordatorio diario */}
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: '12px', padding: '14px 16px',
+          }}>
+            <div>
+              <p style={{ fontSize: '14px', fontWeight: 500, color: 'rgba(255,255,255,0.75)', marginBottom: '2px' }}>
+                Recordatorio diario
+              </p>
+              <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.3)' }}>
+                Aviso en la app a partir de las 22:00 si no has registrado el día
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setDailyReminderEnabled(!dailyReminderEnabled)}
+              style={{
+                width: '44px', height: '24px', borderRadius: '12px', border: 'none',
+                background: dailyReminderEnabled ? '#B44FFF' : 'rgba(255,255,255,0.12)',
+                cursor: 'pointer', position: 'relative', flexShrink: 0,
+                transition: 'background 0.2s ease',
+              }}
+            >
+              <span style={{
+                position: 'absolute', top: '2px',
+                left: dailyReminderEnabled ? '22px' : '2px',
+                width: '20px', height: '20px', borderRadius: '50%',
+                background: 'white', transition: 'left 0.2s ease',
+              }} />
+            </button>
+          </div>
         </div>
 
         {error && (
@@ -323,6 +367,29 @@ export default function SettingsClient({
         >
           {saving ? 'Guardando...' : saved ? '¡Guardado!' : 'Guardar cambios'}
         </button>
+
+        {/* Invitar */}
+        <a
+          href="/invite"
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            background: 'rgba(180,79,255,0.05)', border: '1px solid rgba(180,79,255,0.2)',
+            borderRadius: '12px', padding: '14px 16px', marginTop: '12px', marginBottom: '20px',
+            textDecoration: 'none',
+          }}
+        >
+          <div>
+            <p style={{ fontSize: '14px', fontWeight: 600, color: 'rgba(180,79,255,0.9)', marginBottom: '2px' }}>
+              ✉️ Invitar a alguien especial
+            </p>
+            <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.3)' }}>
+              Tienes 1 invitación disponible
+            </p>
+          </div>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M6 4l4 4-4 4" stroke="rgba(180,79,255,0.6)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </a>
 
         {/* Disclaimer legal */}
         <div style={{
