@@ -113,11 +113,16 @@ function Landing() {
   const searchParams = useSearchParams()
   const inviteToken = searchParams.get('token')
 
-  // Restore saved email on mount
+  // Check session + restore email on mount
   useEffect(() => {
+    // If already logged in, go straight to dashboard
+    fetch('/api/me').then(r => r.json()).then(d => {
+      if (d.loggedIn) router.replace('/dashboard')
+    }).catch(() => {})
+    // Restore last used email
     const saved = localStorage.getItem('angelai_last_email')
     if (saved) setEmail(saved)
-  }, [])
+  }, [router])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
