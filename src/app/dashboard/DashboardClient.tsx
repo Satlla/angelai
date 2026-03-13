@@ -12,6 +12,11 @@ const BodyScoreOrb = dynamic(() => import('@/components/BodyScoreOrb'), {
   loading: () => <div style={{ width: '100%', aspectRatio: '1', maxWidth: '280px', margin: '0 auto' }} />,
 })
 
+const ProgressChart3D = dynamic(() => import('@/components/ProgressChart3D'), {
+  ssr: false,
+  loading: () => <div style={{ height: '280px', borderRadius: '16px', background: '#070810' }} />,
+})
+
 const BADGE_INFO: Record<string, { label: string }> = {
   primer_paso:    { label: 'Primer paso' },
   sin_rendirse:   { label: 'Sin rendirse' },
@@ -276,6 +281,14 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
     date: new Date(c.createdAt).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }),
     Peso: c.weight,
     Score: c.bodyScore || 0,
+  }))
+
+  // 3D progress data
+  const progress3DData = [...checkIns].reverse().map(c => ({
+    date: new Date(c.createdAt).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }),
+    score: c.bodyScore || 0,
+    weight: c.weight,
+    rank: c.rank || 'BRONCE',
   }))
 
   function toggleShoppingItem(itemName: string) {
@@ -1513,160 +1526,47 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
         {activeTab === 'progress' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
 
-            {chartData.length < 2 && (
-              <div style={{
-                background: lightMode ? 'white' : '#0C0D16', border: `1px solid ${lightMode ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.06)'}`,
-                borderRadius: '16px', padding: '32px 20px', textAlign: 'center',
-              }}>
-                <div style={{
-                  width: '48px', height: '48px', borderRadius: '50%',
-                  background: 'rgba(180,79,255,0.1)', border: '1px solid rgba(180,79,255,0.2)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px',
-                }}>
-                  <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-                    <path d="M3 17L8 10l4 4 4-6 3 4" stroke="#B44FFF" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </div>
-                <p style={{ fontSize: '15px', fontWeight: 600, marginBottom: '8px' }}>Tu gráfica está en camino</p>
-                <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.35)', lineHeight: 1.6 }}>
-                  Completa tu próximo check-in en {daysLeft} días para ver tu evolución aquí.
+            {/* 3D Progress Chart — always visible from day 1 */}
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                <p style={{ fontSize: '10px', letterSpacing: '1.5px', color: lightMode ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.28)', textTransform: 'uppercase', fontWeight: 600 }}>
+                  Evolución · Body Score
                 </p>
+                <div style={{ fontSize: '11px', color: lightMode ? 'rgba(0,0,0,0.25)' : 'rgba(255,255,255,0.25)', background: lightMode ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.04)', borderRadius: '6px', padding: '3px 10px' }}>
+                  {checkIns.length} check-in{checkIns.length !== 1 ? 's' : ''}
+                </div>
+              </div>
+              <ProgressChart3D points={progress3DData} />
+            </div>
+
+            {/* Stats summary */}
+            {checkIns.length >= 2 && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div style={{ background: lightMode ? 'white' : '#0C0D16', border: `1px solid ${lightMode ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.06)'}`, borderRadius: '16px', padding: '16px' }}>
+                  <p style={{ fontSize: '10px', letterSpacing: '1px', color: lightMode ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.28)', textTransform: 'uppercase', fontWeight: 600, marginBottom: '8px' }}>Peso</p>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
+                    <span style={{ fontSize: '24px', fontWeight: 800 }}>{latest.weight}</span>
+                    <span style={{ fontSize: '12px', color: lightMode ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.3)' }}>kg</span>
+                  </div>
+                  {weightDiff && (
+                    <p style={{ fontSize: '12px', fontWeight: 600, marginTop: '4px', color: parseFloat(weightDiff) < 0 ? '#00D9F5' : '#FF6B6B' }}>
+                      {parseFloat(weightDiff) < 0 ? '' : '+'}{weightDiff} kg
+                    </p>
+                  )}
+                </div>
+                <div style={{ background: lightMode ? 'white' : '#0C0D16', border: `1px solid ${lightMode ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.06)'}`, borderRadius: '16px', padding: '16px' }}>
+                  <p style={{ fontSize: '10px', letterSpacing: '1px', color: lightMode ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.28)', textTransform: 'uppercase', fontWeight: 600, marginBottom: '8px' }}>Score</p>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
+                    <span style={{ fontSize: '24px', fontWeight: 800 }}>{score}</span>
+                    <span style={{ fontSize: '10px', fontWeight: 700, color: rankColor, background: `${rankColor}18`, padding: '2px 6px', borderRadius: '4px', marginLeft: '4px' }}>{rank}</span>
+                  </div>
+                  {checkIns.length >= 2 && (() => {
+                    const diff = (checkIns[0].bodyScore || 0) - (checkIns[1].bodyScore || 0)
+                    return <p style={{ fontSize: '12px', fontWeight: 600, marginTop: '4px', color: diff >= 0 ? '#B44FFF' : '#FF6B6B' }}>{diff >= 0 ? '+' : ''}{diff} pts</p>
+                  })()}
+                </div>
               </div>
             )}
-
-            {chartData.length >= 2 && (
-              <>
-                {/* Weight chart */}
-                <div style={{
-                  background: lightMode ? 'white' : '#0C0D16', border: `1px solid ${lightMode ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.06)'}`,
-                  borderRadius: '16px', padding: '20px',
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '20px' }}>
-                    <div>
-                      <p style={{
-                        fontSize: '10px', letterSpacing: '1.5px', color: 'rgba(255,255,255,0.28)',
-                        textTransform: 'uppercase', fontWeight: 600, marginBottom: '6px',
-                      }}>Evolución de peso</p>
-                      <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
-                        <span style={{ fontSize: '28px', fontWeight: 800, letterSpacing: '-1px' }}>{latest.weight}</span>
-                        <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.3)' }}>kg</span>
-                        {weightDiff && (
-                          <span style={{
-                            fontSize: '13px', fontWeight: 600, marginLeft: '4px',
-                            color: parseFloat(weightDiff) < 0 ? '#00D9F5' : '#FF6B6B',
-                          }}>
-                            {parseFloat(weightDiff) < 0 ? '' : '+'}{weightDiff} kg
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <div style={{
-                      fontSize: '11px', color: 'rgba(255,255,255,0.25)',
-                      background: 'rgba(255,255,255,0.04)', borderRadius: '6px',
-                      padding: '4px 10px',
-                    }}>
-                      {checkIns.length} registros
-                    </div>
-                  </div>
-
-                  <ResponsiveContainer width="100%" height={160}>
-                    <AreaChart data={chartData} margin={{ top: 5, right: 4, bottom: 0, left: -24 }}>
-                      <defs>
-                        <linearGradient id="weightGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#00D9F5" stopOpacity={0.25} />
-                          <stop offset="100%" stopColor="#00D9F5" stopOpacity={0} />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid stroke="rgba(255,255,255,0.04)" vertical={false} />
-                      <XAxis
-                        dataKey="date"
-                        tick={{ fill: 'rgba(255,255,255,0.25)', fontSize: 11 }}
-                        axisLine={false} tickLine={false}
-                      />
-                      <YAxis
-                        tick={{ fill: 'rgba(255,255,255,0.25)', fontSize: 11 }}
-                        axisLine={false} tickLine={false}
-                        domain={['dataMin - 2', 'dataMax + 2']}
-                      />
-                      <Tooltip content={<CustomTooltip unit="kg" />} />
-                      <Area
-                        type="monotone" dataKey="Peso"
-                        stroke="#00D9F5" strokeWidth={2.5}
-                        fill="url(#weightGrad)"
-                        dot={{ fill: '#00D9F5', r: 4, strokeWidth: 0 }}
-                        activeDot={{ r: 6, fill: '#00D9F5', strokeWidth: 0 }}
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-
-                {/* Body Score chart */}
-                <div style={{
-                  background: lightMode ? 'white' : '#0C0D16', border: `1px solid ${lightMode ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.06)'}`,
-                  borderRadius: '16px', padding: '20px',
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '20px' }}>
-                    <div>
-                      <p style={{
-                        fontSize: '10px', letterSpacing: '1.5px', color: 'rgba(255,255,255,0.28)',
-                        textTransform: 'uppercase', fontWeight: 600, marginBottom: '6px',
-                      }}>Evolución de Body Score</p>
-                      <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
-                        <span style={{ fontSize: '28px', fontWeight: 800, letterSpacing: '-1px' }}>{score}</span>
-                        <span style={{
-                          fontSize: '10px', fontWeight: 700, letterSpacing: '1.5px',
-                          textTransform: 'uppercase', color: rankColor,
-                          background: `${rankColor}18`, padding: '3px 8px', borderRadius: '4px', marginLeft: '4px',
-                        }}>
-                          {rank}
-                        </span>
-                      </div>
-                    </div>
-                    {checkIns.length >= 2 && (() => {
-                      const diff = (checkIns[0].bodyScore || 0) - (checkIns[1].bodyScore || 0)
-                      return (
-                        <div style={{
-                          fontSize: '13px', fontWeight: 600,
-                          color: diff >= 0 ? '#B44FFF' : '#FF6B6B',
-                          background: diff >= 0 ? 'rgba(180,79,255,0.1)' : 'rgba(255,107,107,0.1)',
-                          borderRadius: '6px', padding: '4px 10px',
-                        }}>
-                          {diff >= 0 ? '+' : ''}{diff} pts
-                        </div>
-                      )
-                    })()}
-                  </div>
-
-                  <ResponsiveContainer width="100%" height={160}>
-                    <AreaChart data={chartData} margin={{ top: 5, right: 4, bottom: 0, left: -24 }}>
-                      <defs>
-                        <linearGradient id="scoreGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#B44FFF" stopOpacity={0.3} />
-                          <stop offset="100%" stopColor="#B44FFF" stopOpacity={0} />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid stroke="rgba(255,255,255,0.04)" vertical={false} />
-                      <XAxis
-                        dataKey="date"
-                        tick={{ fill: 'rgba(255,255,255,0.25)', fontSize: 11 }}
-                        axisLine={false} tickLine={false}
-                      />
-                      <YAxis
-                        tick={{ fill: 'rgba(255,255,255,0.25)', fontSize: 11 }}
-                        axisLine={false} tickLine={false}
-                        domain={['dataMin - 30', 'dataMax + 30']}
-                      />
-                      <Tooltip content={<CustomTooltip unit="pts" />} />
-                      <Area
-                        type="monotone" dataKey="Score"
-                        stroke="#B44FFF" strokeWidth={2.5}
-                        fill="url(#scoreGrad)"
-                        dot={{ fill: '#B44FFF', r: 4, strokeWidth: 0 }}
-                        activeDot={{ r: 6, fill: '#B44FFF', strokeWidth: 0 }}
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
 
                 {/* Measurements mini chart if data exists */}
                 {checkIns.some(c => c.waist) && (
@@ -1713,8 +1613,7 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
                     </div>
                   </div>
                 )}
-              </>
-            )}
+
           </div>
         )}
 
