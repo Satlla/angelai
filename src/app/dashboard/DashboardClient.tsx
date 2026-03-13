@@ -224,8 +224,7 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
     if (!dailyReminderEnabled) return
     const dismissedKey = `reminder_dismissed_${new Date().toDateString()}`
     if (localStorage.getItem(dismissedKey)) return
-    // Show aggressively if 2+ days without log, or after 22:00 if not logged today
-    if (daysSince >= 2) {
+    if (daysSince >= 1) {
       setShowDailyReminder(true)
     } else if (!hasLoggedToday && new Date().getHours() >= 22) {
       setShowDailyReminder(true)
@@ -997,7 +996,7 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
               <div style={{ fontSize: '18px', marginTop: '6px' }}>{streak >= 14 ? '🔥🔥' : streak >= 7 ? '🔥' : streak >= 3 ? '⚡' : '✨'}</div>
             </div>
           )}
-          {motivMsg.text && (
+          {motivMsg.text && streak >= 7 && (
             <div style={{
               background: motivMsg.bg,
               border: `1px solid ${motivMsg.color}25`,
