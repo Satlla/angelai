@@ -758,11 +758,13 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
   return (
     <div style={{ minHeight: '100vh', background: lightMode ? '#F5F5F7' : '#07080F', paddingBottom: '80px', color: lightMode ? '#1a1a2e' : 'white' }}>
 
+      {/* Sticky header wrapper: nav + optional banner */}
+      <div style={{ position: 'sticky', top: 0, zIndex: 100 }}>
+
       {/* Top nav */}
       <nav style={{
-        position: 'sticky', top: 0, zIndex: 100,
         background: lightMode ? 'rgba(245,245,247,0.94)' : 'rgba(7,8,15,0.94)', backdropFilter: 'blur(20px)',
-        borderBottom: `1px solid ${lightMode ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.05)'}`,
+        borderBottom: showDailyReminder ? 'none' : `1px solid ${lightMode ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.05)'}`,
         paddingTop: 'env(safe-area-inset-top)',
       }}>
         <div style={{
@@ -830,15 +832,16 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
         </div>
       </nav>
 
-      {/* Daily reminder banner — top strip */}
+      {/* Daily reminder banner — inside sticky wrapper, right below nav */}
       {showDailyReminder && (
         <div style={{
           background: daysSince >= 2 ? 'rgba(255,107,107,0.12)' : 'rgba(180,79,255,0.1)',
+          backdropFilter: 'blur(12px)',
           borderBottom: `1px solid ${daysSince >= 2 ? 'rgba(255,107,107,0.25)' : 'rgba(180,79,255,0.25)'}`,
-          padding: '10px 20px',
+          padding: '8px 20px',
           display: 'flex', alignItems: 'center', gap: '10px',
         }}>
-          <span style={{ fontSize: '16px', flexShrink: 0 }}>{daysSince >= 2 ? '🚨' : '🌙'}</span>
+          <span style={{ fontSize: '15px', flexShrink: 0 }}>{daysSince >= 2 ? '🚨' : '🌙'}</span>
           <p style={{ fontSize: '12px', fontWeight: 600, color: daysSince >= 2 ? '#FF6B6B' : '#B44FFF', flex: 1, lineHeight: 1.4 }}>
             {daysSince >= 2
               ? `${daysSince} días sin registrar. ¿Qué está pasando?`
@@ -857,13 +860,15 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
               localStorage.setItem(key, '1')
               setShowDailyReminder(false)
             }}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: daysSince >= 2 ? 'rgba(255,107,107,0.5)' : 'rgba(180,79,255,0.5)', fontSize: '16px', padding: '0 2px', lineHeight: 1, flexShrink: 0 }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: daysSince >= 2 ? 'rgba(255,107,107,0.5)' : 'rgba(180,79,255,0.5)', fontSize: '18px', padding: '0 2px', lineHeight: 1, flexShrink: 0 }}
             aria-label="Cerrar"
           >
             ×
           </button>
         </div>
       )}
+
+      </div>{/* end sticky header wrapper */}
 
       <div style={{ maxWidth: '480px', margin: '0 auto', padding: '0 20px' }}>
 
