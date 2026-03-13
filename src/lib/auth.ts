@@ -38,22 +38,8 @@ export async function getSession() {
     const { payload } = await jwtVerify(token, getSecret())
     const session = payload as { userId: string; email: string; iat?: number }
 
-    // Renovar si queda menos de 7 días
-    if (payload.exp) {
-      const sevenDays = 7 * 24 * 60 * 60
-      const remaining = payload.exp - Math.floor(Date.now() / 1000)
-      if (remaining < sevenDays) {
-        await createSession(session.userId, session.email)
-      }
-    }
-
     return session
   } catch {
-    // Token inválido o expirado — limpiar cookie
-    try {
-      const cookieStore = await cookies()
-      cookieStore.delete(COOKIE)
-    } catch { /* ignorar */ }
     return null
   }
 }
