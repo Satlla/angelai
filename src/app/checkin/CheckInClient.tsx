@@ -84,11 +84,37 @@ export default function CheckInClient({
       if (freeTextContext) fd.append('freeTextContext', freeTextContext)
 
       const res = await fetch('/api/analyze', { method: 'POST', body: fd })
-      if (!res.ok) throw new Error()
-      const data = await res.json()
-      router.push(`/plan-listo?checkInId=${data.checkInId}`)
-    } catch {
-      setError('Error al analizar. Inténtalo de nuevo.')
+      if (!res.ok || !res.body) throw new Error('Error al analizar')
+
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+        const parts = buffer.split('\n\n')
+        buffer = parts.pop() || ''
+        for (const part of parts) {
+          if (!part.startsWith('data: ')) continue
+          try {
+            const data = JSON.parse(part.slice(6))
+            if (data.type === 'done') {
+              router.push(`/plan-listo?checkInId=${data.checkInId}`)
+              return
+            } else if (data.type === 'error') {
+              throw new Error(data.message)
+            }
+          } catch (parseErr) {
+            if (parseErr instanceof Error && parseErr.message !== 'Unexpected end of JSON input') {
+              throw parseErr
+            }
+          }
+        }
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al analizar. Inténtalo de nuevo.')
       setLoading(false)
     }
   }

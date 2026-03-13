@@ -8,19 +8,31 @@ datasource db {
 }
 
 model User {
-  id             String      @id @default(cuid())
-  email          String      @unique
-  name           String?
-  age            Int?
-  sex            String?
+  id              String           @id @default(cuid())
+  email           String           @unique
+  name            String?
+  createdAt       DateTime         @default(now())
+  age             Int?
+  sex             String?
+  currentMedal    String?
+  medalUpdatedAt  DateTime?
   profilePhotoUrl String?
-  createdAt      DateTime    @default(now())
-  checkIns       CheckIn[]
-  badges         UserBadge[]
-  preferences    UserPreferences?
-  dailyLogs      DailyLog[]
-  currentMedal   String?     // INICIO | BRONCE | PLATA | ORO | PLATINO | DIAMANTE | LEYENDA
-  medalUpdatedAt DateTime?
+  checkIns        CheckIn[]
+  dailyLogs       DailyLog[]
+  badges          UserBadge[]
+  preferences     UserPreferences?
+  coachMessages   CoachMessage[]
+}
+
+model CoachMessage {
+  id        String   @id @default(cuid())
+  userId    String
+  role      String
+  content   String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
 }
 
 model PendingInvite {
@@ -33,74 +45,61 @@ model PendingInvite {
 }
 
 model CheckIn {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  createdAt DateTime @default(now())
-
-  weight     Float
-  height     Float
-  waist      Float?
-  hips       Float?
-  chest      Float?
-  arms       Float?
-  thighs     Float?   // muslos
-  calves     Float?   // pantorrillas
-  shoulders  Float?   // hombros
-  goal       String @default("definicion")
-
-  frontPhotoUrl  String?
-  sidePhotoUrl   String?
-  photoExpiresAt DateTime?
-
-  age           Int?
-  sex           String?
-  activityLevel String?
-
+  id                String    @id @default(cuid())
+  userId            String
+  createdAt         DateTime  @default(now())
+  weight            Float
+  height            Float
+  waist             Float?
+  hips              Float?
+  chest             Float?
+  arms              Float?
+  goal              String    @default("definicion")
+  frontPhotoUrl     String?
+  sidePhotoUrl      String?
+  photoExpiresAt    DateTime?
   bodyScore         Int?
   rank              String?
   analysis          String?
   dietPlan          String?
-  customizationUsed Boolean  @default(false)
+  activityLevel     String?
+  age               Int?
+  sex               String?
+  customizationUsed Boolean   @default(false)
+  calves            Float?
+  shoulders         Float?
+  thighs            Float?
+  user              User      @relation(fields: [userId], references: [id])
 
   @@index([userId])
 }
 
 model UserPreferences {
-  id                String   @id @default(cuid())
-  userId            String   @unique
-  user              User     @relation(fields: [userId], references: [id])
-
-  // Entrenamiento
-  trainingDays      Int?           // días preferidos por semana
-  cardioTime        String?        // "mañana" | "tarde" | "noche" | "separado" | "ninguno"
-  equipment         String?        // "gym" | "casa" | "mixto"
-  likedExercises    String?        // JSON: string[]
-  dislikedExercises String?        // JSON: string[]
-  trainingNotes     String?        // notas libres
-
-  // Dieta
-  dietNotes         String?        // alergias, preferencias, intolerancias
-  freeTextContext   String?        // contexto libre del usuario
-
-  // Datos físicos editables (override del check-in)
-  height            Float?
-  activityLevel     String?
-
-  // Notificaciones
-  weeklyEmailEnabled    Boolean @default(true)
-  dailyReminderEnabled  Boolean @default(true)
-
-  updatedAt         DateTime @updatedAt
-  createdAt         DateTime @default(now())
+  id                   String   @id @default(cuid())
+  userId               String   @unique
+  trainingDays         Int?
+  cardioTime           String?
+  equipment            String?
+  likedExercises       String?
+  dislikedExercises    String?
+  trainingNotes        String?
+  dietNotes            String?
+  updatedAt            DateTime @updatedAt
+  createdAt            DateTime @default(now())
+  freeTextContext      String?
+  weeklyEmailEnabled   Boolean  @default(true)
+  activityLevel        String?
+  height               Float?
+  dailyReminderEnabled Boolean  @default(true)
+  user                 User     @relation(fields: [userId], references: [id])
 }
 
 model UserBadge {
   id       String   @id @default(cuid())
   userId   String
-  user     User     @relation(fields: [userId], references: [id])
   badge    String
   earnedAt DateTime @default(now())
+  user     User     @relation(fields: [userId], references: [id])
 
   @@unique([userId, badge])
 }
@@ -114,22 +113,19 @@ model AnalyticsEvent {
 }
 
 model DailyLog {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  date      DateTime // normalizado a medianoche UTC del día
-  createdAt DateTime @default(now())
-
-  // Cuestionario rápido (sliders / booleans)
-  dietScore    Int      // 0-100: % cumplimiento dieta
-  trainedToday Boolean  // ¿Fuiste al gym/entrenaste?
-  sleptWell    Boolean  // ¿Dormiste bien?
-  waterOk      Boolean  // ¿Bebiste suficiente agua?
-  stressLevel  Int      // 1-5: nivel de estrés
-  notes        String?  // texto libre opcional
-
-  // Puntuación de disciplina calculada (0-100, puede ser null hasta que la IA la evalúe)
+  id              String   @id @default(cuid())
+  userId          String
+  date            DateTime
+  createdAt       DateTime @default(now())
+  dietScore       Int
+  trainedToday    Boolean
+  sleptWell       Boolean
+  waterOk         Boolean
+  waterGlasses    Int?
+  stressLevel     Int
+  notes           String?
   disciplineScore Int?
+  user            User     @relation(fields: [userId], references: [id])
 
   @@unique([userId, date])
   @@index([userId])

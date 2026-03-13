@@ -17,8 +17,7 @@ function OrbMesh({ rank, score }: { rank: string; score: number }) {
   const meshRef = useRef<THREE.Mesh>(null)
   const ringRef = useRef<THREE.Mesh>(null)
   const colors = RANK_COLORS[rank] ?? RANK_COLORS['BRONCE']
-
-  const intensity = 0.4 + (score / 100) * 0.6 // more score = more glow
+  const intensity = 0.4 + (score / 100) * 0.6
 
   useFrame((state) => {
     if (!meshRef.current) return
@@ -36,7 +35,7 @@ function OrbMesh({ rank, score }: { rank: string; score: number }) {
 
   return (
     <group>
-      {/* Outer glow */}
+      {/* Main sphere */}
       <Sphere ref={meshRef} args={[1, 64, 64]}>
         <MeshDistortMaterial
           color={colors.primary}
@@ -75,7 +74,7 @@ function Particles({ rank }: { rank: string }) {
       const theta = Math.random() * Math.PI * 2
       const phi = Math.acos(2 * Math.random() - 1)
       const r = 1.6 + Math.random() * 0.8
-      pos[i * 3] = r * Math.sin(phi) * Math.cos(theta)
+      pos[i * 3]     = r * Math.sin(phi) * Math.cos(theta)
       pos[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta)
       pos[i * 3 + 2] = r * Math.cos(phi)
     }
@@ -105,7 +104,7 @@ export default function BodyScoreOrb({ score, rank }: { score: number; rank: str
   return (
     <div style={{ position: 'relative', width: '100%', aspectRatio: '1', maxWidth: '280px', margin: '0 auto' }}>
       <Canvas
-        camera={{ position: [0, 0, 3.5], fov: 45 }}
+        camera={{ position: [0, 0, 4.2], fov: 42 }}
         style={{ background: 'transparent' }}
         gl={{ alpha: true, antialias: true, powerPreference: 'high-performance' }}
         frameloop="always"

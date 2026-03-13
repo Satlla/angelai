@@ -27,8 +27,10 @@ export default async function PlanListo({
 
   if (!checkIn?.dietPlan) redirect('/dashboard')
 
+  let plan
+  try { plan = JSON.parse(checkIn.dietPlan) } catch { redirect('/dashboard') }
+
   const sex = user?.sex || checkIn.sex || 'hombre'
-  const plan = JSON.parse(checkIn.dietPlan)
 
   return (
     <PlanListoClient

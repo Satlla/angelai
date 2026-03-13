@@ -787,7 +787,7 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: lightMode ? '#F5F5F7' : '#07080F', paddingBottom: '80px', color: lightMode ? '#1a1a2e' : 'white' }}>
+    <div className="dashboard-root" style={{ minHeight: '100vh', background: lightMode ? '#F5F5F7' : '#07080F', paddingBottom: '80px', color: lightMode ? '#1a1a2e' : 'white' }}>
 
       {/* Sticky header wrapper: nav + optional banner */}
       <div style={{ position: 'sticky', top: 0, zIndex: 100 }}>
@@ -2011,7 +2011,7 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
 
       {/* Greeting speech bubble */}
       {jarvisGreeting && !showJarvis && (
-        <div style={{
+        <div className="jarvis-bubble" style={{
           position: 'fixed', bottom: '100px', right: '16px', zIndex: 300,
           maxWidth: '240px', animation: 'slideUpModal 0.3s ease',
         }}>
@@ -2050,6 +2050,7 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
       {/* FAB button */}
       {!showJarvis && (
         <button
+          className="jarvis-fab"
           onClick={() => { setJarvisGreeting(false); setShowJarvis(true) }}
           style={{
             position: 'fixed', bottom: '90px', right: '16px', zIndex: 300,
@@ -2155,11 +2156,11 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
                 style={{ flex: 1, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', color: 'white', padding: '10px 14px', fontSize: '14px', fontFamily: 'inherit', resize: 'none', outline: 'none', lineHeight: 1.5 }}
               />
               <button
-                onClick={sendCoachMessage}
+                onPointerDown={e => { e.preventDefault(); sendCoachMessage() }}
                 disabled={coachLoading || !coachInput.trim()}
-                style={{ width: '44px', height: '44px', alignSelf: 'flex-end', flexShrink: 0, borderRadius: '12px', background: coachLoading || !coachInput.trim() ? 'rgba(180,79,255,0.08)' : '#B44FFF', border: 'none', color: 'white', cursor: coachLoading || !coachInput.trim() ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                style={{ width: '48px', height: '48px', alignSelf: 'flex-end', flexShrink: 0, borderRadius: '12px', background: coachLoading || !coachInput.trim() ? 'rgba(180,79,255,0.08)' : '#B44FFF', border: 'none', color: 'white', cursor: coachLoading || !coachInput.trim() ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.15s' }}
               >
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M3 9h10M10 5l4 4-4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
               </button>
             </div>
           </div>

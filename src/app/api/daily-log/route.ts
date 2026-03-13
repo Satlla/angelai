@@ -9,6 +9,7 @@ const DailyLogSchema = z.object({
   trainedToday: z.boolean(),
   sleptWell: z.boolean(),
   waterOk: z.boolean(),
+  waterGlasses: z.number().int().min(0).max(12).optional(),
   stressLevel: z.number().int().min(1).max(5),
   notes: z.string().max(500).optional(),
 })
@@ -22,21 +23,29 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) {
     return NextResponse.json({ error: 'Datos inválidos', details: parsed.error.flatten().fieldErrors }, { status: 400 })
   }
-  const { dietScore, trainedToday, sleptWell, waterOk, stressLevel, notes } = parsed.data
+  const { dietScore, trainedToday, sleptWell, waterOk, waterGlasses, stressLevel, notes } = parsed.data
 
-  // Normalizar la fecha a medianoche UTC del día de España (UTC+1/+2)
+  // Calcular disciplineScore (0-100)
+  const disciplineScore = Math.round(
+    (dietScore / 100) * 40 +
+    (trainedToday ? 25 : 0) +
+    (sleptWell ? 20 : 0) +
+    (waterOk ? 10 : 0) +
+    ((6 - stressLevel) / 5) * 5
+  )
+
+  // Fecha en timezone España usando Intl (correcto en servidor UTC)
   const now = new Date()
-  const spainOffset = isDST(now) ? 2 : 1
-  const spainNow = new Date(now.getTime() + spainOffset * 60 * 60 * 1000)
-  const todayDate = new Date(Date.UTC(
-    spainNow.getUTCFullYear(),
-    spainNow.getUTCMonth(),
-    spainNow.getUTCDate()
-  ))
+  const spainParts = new Intl.DateTimeFormat('es-ES', {
+    timeZone: 'Europe/Madrid',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+  }).formatToParts(now)
+  const sp = Object.fromEntries(spainParts.filter(p => p.type !== 'literal').map(p => [p.type, parseInt(p.value)]))
+  const todayDate = new Date(Date.UTC(sp.year, sp.month - 1, sp.day))
 
   const log = await prisma.dailyLog.upsert({
     where: { userId_date: { userId: user.id, date: todayDate } },
-    update: { dietScore, trainedToday, sleptWell, waterOk, stressLevel, notes },
+    update: { dietScore, trainedToday, sleptWell, waterOk, waterGlasses, stressLevel, notes, disciplineScore },
     create: {
       userId: user.id,
       date: todayDate,
@@ -44,8 +53,10 @@ export async function POST(req: NextRequest) {
       trainedToday: !!trainedToday,
       sleptWell: !!sleptWell,
       waterOk: !!waterOk,
+      waterGlasses: waterGlasses ?? null,
       stressLevel: stressLevel ?? 3,
       notes,
+      disciplineScore,
     },
   })
 
@@ -67,10 +78,4 @@ export async function GET(req: NextRequest) {
   })
 
   return NextResponse.json({ logs })
-}
-
-function isDST(date: Date): boolean {
-  const jan = new Date(date.getFullYear(), 0, 1).getTimezoneOffset()
-  const jul = new Date(date.getFullYear(), 6, 1).getTimezoneOffset()
-  return Math.min(jan, jul) === date.getTimezoneOffset()
 }

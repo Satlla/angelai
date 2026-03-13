@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
 import { getSession } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
@@ -10,7 +11,8 @@ export default async function Dashboard() {
   const user = await prisma.user.findUnique({ where: { id: session.userId } })
   if (!user) redirect('/')
 
-  const [checkIns, badges, preferences, todayLog] = await Promise.all([
+  try {
+  const [checkIns, badges, preferences, todayLog, dailyLogs] = await Promise.all([
     prisma.checkIn.findMany({
       where: { userId: user.id },
       orderBy: { createdAt: 'desc' },
@@ -24,6 +26,7 @@ export default async function Dashboard() {
     prisma.userBadge.findMany({ where: { userId: user.id } }),
     prisma.userPreferences.findUnique({ where: { userId: user.id } }),
     prisma.dailyLog.findFirst({ where: { userId: user.id, date: { gte: new Date(new Date().setHours(0,0,0,0)) } } }),
+    prisma.dailyLog.findMany({ where: { userId: user.id }, orderBy: { date: 'desc' }, take: 60, select: { date: true, disciplineScore: true, trainedToday: true } }),
   ])
 
   if (checkIns.length === 0) redirect('/onboarding')
@@ -34,6 +37,7 @@ export default async function Dashboard() {
   const daysLeft = Math.max(0, Math.ceil((nextCheckIn.getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
 
   return (
+    <Suspense fallback={<div style={{ minHeight: '100vh', background: '#07080F' }} />}>
     <DashboardClient
       user={{ id: user.id, email: user.email, name: user.name, profilePhotoUrl: user.profilePhotoUrl }}
       checkIns={checkIns.map((c: typeof checkIns[0]) => ({
@@ -55,15 +59,22 @@ export default async function Dashboard() {
       daysLeft={daysLeft}
       dailyReminderEnabled={preferences?.dailyReminderEnabled ?? true}
       hasLoggedToday={!!todayLog}
+      dailyLogs={dailyLogs.map(l => ({ date: l.date.toISOString(), disciplineScore: l.disciplineScore, trainedToday: l.trainedToday }))}
       preferences={{
         trainingDays: preferences?.trainingDays ?? null,
         cardioTime: preferences?.cardioTime ?? null,
         equipment: preferences?.equipment ?? null,
-        likedExercises: preferences?.likedExercises ? JSON.parse(preferences.likedExercises) : [],
-        dislikedExercises: preferences?.dislikedExercises ? JSON.parse(preferences.dislikedExercises) : [],
+        likedExercises: (() => { try { return preferences?.likedExercises ? JSON.parse(preferences.likedExercises) : [] } catch { return [] } })(),
+        dislikedExercises: (() => { try { return preferences?.dislikedExercises ? JSON.parse(preferences.dislikedExercises) : [] } catch { return [] } })(),
         trainingNotes: preferences?.trainingNotes ?? null,
         dietNotes: preferences?.dietNotes ?? null,
       }}
     />
+    </Suspense>
   )
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error('[Dashboard] Server error:', msg)
+    throw err
+  }
 }

@@ -12,7 +12,6 @@ export async function POST(req: NextRequest) {
   const { message, history } = await req.json()
   if (!message?.trim()) return NextResponse.json({ error: 'Mensaje vacío' }, { status: 400 })
 
-  // Gather user context
   const [user, latestCheckIn, recentLogs] = await Promise.all([
     prisma.user.findUnique({ where: { id: session.userId }, select: { name: true, age: true, sex: true } }),
     prisma.checkIn.findFirst({
@@ -52,7 +51,7 @@ Perfil del usuario:
 - Plan nutricional: ${macros || 'no disponible'}
 - Últimos 7 días: disciplina media ${avgDiscipline}%, entrenó ${trainedDays}/7 días
 
-Responde en español. Sé conciso (máximo 150 palabras). Usa **negritas** solo para conceptos clave importantes. No uses asteriscos simples para cursiva. Si el usuario pregunta sobre dieta o entrenamiento, da consejos específicos basados en su perfil. Si va con excusas, dale caña.`
+Responde en español. Sé conciso (máximo 150 palabras). Usa **negritas** solo para conceptos clave importantes. No uses asteriscos simples para cursiva. Si el usuario pregunta sobre dieta o entrenamiento, da consejos específicos basados en su perfil. Si el usuario pregunta algo que no tiene relación con fitness, nutrición o entrenamiento, rediríjelo con algo como "Eso está fuera de mi especialidad — estoy aquí para ayudarte con tu dieta y entreno. ¿En qué puedo ayudarte?" Si va con excusas, dale caña.`
 
   const messages = [
     ...(history ?? []).map((m: { role: string; content: string }) => ({
@@ -70,5 +69,18 @@ Responde en español. Sé conciso (máximo 150 palabras). Usa **negritas** solo 
   })
 
   const reply = response.content[0].type === 'text' ? response.content[0].text : ''
+
+  // Save both messages to DB
+  try {
+    await prisma.coachMessage.createMany({
+      data: [
+        { userId: session.userId, role: 'user', content: message },
+        { userId: session.userId, role: 'assistant', content: reply },
+      ],
+    })
+  } catch (err) {
+    console.error('[coach-chat] Error saving messages:', err instanceof Error ? err.message : err)
+  }
+
   return NextResponse.json({ reply })
 }

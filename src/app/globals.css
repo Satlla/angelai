@@ -253,6 +253,45 @@ body::before {
   }
 }
 
+/* ── Desktop layout ── */
+@media (min-width: 768px) {
+  /* Center the app column */
+  body {
+    background: #04050A;
+  }
+
+  /* Dashboard wrapper — phone-in-browser feel */
+  .dashboard-root {
+    max-width: 480px;
+    margin: 0 auto;
+    min-height: 100vh;
+    position: relative;
+    box-shadow: 0 0 80px rgba(0,0,0,0.6);
+  }
+
+  /* Tab bar — full width background, inner div already centers at 480px */
+  .tab-bar {
+    left: 0;
+    right: 0;
+  }
+
+  /* Dr. Jarvis FAB — stay within content column */
+  .jarvis-fab {
+    right: calc(50% - 240px + 16px) !important;
+  }
+
+  .jarvis-bubble {
+    right: calc(50% - 240px + 16px) !important;
+  }
+}
+
+/* ── Small mobile (< 375px) ── */
+@media (max-width: 374px) {
+  .tab-bar button span {
+    display: none; /* hide labels on tiny screens */
+  }
+}
+
 /* Selection style */
 .goal-card {
   background: rgba(255,255,255,0.03);
@@ -398,6 +437,43 @@ body::before {
 [data-theme="light"] body {
   background: #F5F5F7 !important;
   color: #1a1a2e !important;
+}
+
+/* Override all inline white/dark text colors in light mode */
+[data-theme="light"] div[style],
+[data-theme="light"] p[style],
+[data-theme="light"] span[style],
+[data-theme="light"] h1[style],
+[data-theme="light"] h2[style],
+[data-theme="light"] h3[style],
+[data-theme="light"] h4[style],
+[data-theme="light"] li[style] {
+  color: #1a1a2e !important;
+}
+
+/* Keep purple/cyan accent colors */
+[data-theme="light"] [style*="#B44FFF"],
+[data-theme="light"] [style*="rgb(180, 79, 255)"],
+[data-theme="light"] [style*="#00D9F5"],
+[data-theme="light"] [style*="#FFB800"],
+[data-theme="light"] [style*="#FF6B6B"],
+[data-theme="light"] [style*="#4CAF50"] {
+  color: inherit;
+}
+
+/* White text on colored backgrounds stays white */
+[data-theme="light"] button[style*="background: #B44FFF"],
+[data-theme="light"] button[style*="background: linear-gradient"],
+[data-theme="light"] a[style*="background: linear-gradient"] {
+  color: white !important;
+}
+
+/* All divs with dark backgrounds get white bg */
+[data-theme="light"] div[style*="background: rgb(12, 13, 22)"],
+[data-theme="light"] div[style*="background: rgb(7, 8, 15)"],
+[data-theme="light"] div[style*="background: rgb(17, 18, 32)"] {
+  background: white !important;
+  border-color: rgba(0,0,0,0.08) !important;
 }
 
 [data-theme="light"] .tab-bar {

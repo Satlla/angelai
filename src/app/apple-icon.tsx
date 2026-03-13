@@ -10,29 +10,37 @@ export default function AppleIcon() {
       style={{
         width: 180,
         height: 180,
-        background: '#07080F',
+        background: 'linear-gradient(135deg, #0d0520 0%, #07080F 100%)',
         borderRadius: 40,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
+        position: 'relative',
       }}
     >
-      <svg width="132" height="150" viewBox="0 0 36 42" fill="none">
+      <div style={{
+        position: 'absolute',
+        width: 120,
+        height: 120,
+        borderRadius: '50%',
+        background: 'radial-gradient(circle, rgba(180,79,255,0.2) 0%, transparent 70%)',
+        display: 'flex',
+      }} />
+      <svg width="122" height="122" viewBox="0 0 100 100" fill="none">
         <defs>
-          <linearGradient id="lg" x1="0%" y1="0%" x2="100%" y2="100%">
+          <linearGradient id="g1" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="#B44FFF" />
             <stop offset="100%" stopColor="#00D9F5" />
           </linearGradient>
+          <linearGradient id="g2" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#B44FFF" stopOpacity="0.25" />
+            <stop offset="100%" stopColor="#00D9F5" stopOpacity="0.08" />
+          </linearGradient>
         </defs>
-        <polygon
-          points="18,2 34,11 34,31 18,40 2,31 2,11"
-          fill="rgba(180,79,255,0.15)"
-          stroke="url(#lg)"
-          strokeWidth="1.5"
-        />
-        <line x1="11" y1="30" x2="15" y2="14" stroke="url(#lg)" strokeWidth="2.5" strokeLinecap="round" />
-        <line x1="25" y1="30" x2="21" y2="14" stroke="url(#lg)" strokeWidth="2.5" strokeLinecap="round" />
-        <line x1="12.5" y1="23" x2="23.5" y2="23" stroke="url(#lg)" strokeWidth="2" strokeLinecap="round" />
+        <polygon points="50,6 88,28 88,72 50,94 12,72 12,28" fill="url(#g2)" stroke="url(#g1)" strokeWidth="3" />
+        <line x1="32" y1="74" x2="42" y2="30" stroke="url(#g1)" strokeWidth="7" strokeLinecap="round" />
+        <line x1="68" y1="74" x2="58" y2="30" stroke="url(#g1)" strokeWidth="7" strokeLinecap="round" />
+        <line x1="36" y1="56" x2="64" y2="56" stroke="url(#g1)" strokeWidth="5.5" strokeLinecap="round" />
       </svg>
     </div>,
     { ...size }

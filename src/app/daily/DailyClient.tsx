@@ -39,9 +39,9 @@ const QUESTIONS = [
     color: '#B44FFF',
   },
   {
-    key: 'waterOk',
-    type: 'bool',
-    label: '¿Has bebido suficiente agua?',
+    key: 'waterGlasses',
+    type: 'glasses',
+    label: '¿Cuántos vasos de agua has bebido?',
     emoji: '💧',
     color: '#00D9F5',
   },
@@ -55,7 +55,7 @@ export default function DailyClient() {
     stressLevel: 2,
     trainedToday: false,
     sleptWell: true,
-    waterOk: true,
+    waterGlasses: 6,
   })
   const [notes, setNotes] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -68,17 +68,18 @@ export default function DailyClient() {
   async function handleSubmit() {
     setSubmitting(true)
     try {
+      const glasses = answers.waterGlasses as number
+      const waterOk = glasses >= 6
       const res = await fetch('/api/daily-log', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...answers, notes }),
+        body: JSON.stringify({ ...answers, waterOk, waterGlasses: glasses, notes }),
       })
       if (res.ok) {
-        // Calcular puntuación de disciplina local
         const d = answers.dietScore as number
         const t = answers.trainedToday ? 20 : 0
         const s = answers.sleptWell ? 15 : 0
-        const w = answers.waterOk ? 10 : 0
+        const w = glasses >= 6 ? 10 : glasses >= 4 ? 7 : glasses >= 2 ? 3 : 0
         const st = Math.max(0, (5 - (answers.stressLevel as number)) * 3)
         const calculated = Math.min(100, Math.round(d * 0.55 + t + s + w + st))
         setScore(calculated)
@@ -137,7 +138,7 @@ export default function DailyClient() {
               { label: 'Dieta', value: `${answers.dietScore}%`, color: '#B44FFF' },
               { label: 'Entrenamiento', value: answers.trainedToday ? 'Sí ✓' : 'No ✗', color: answers.trainedToday ? '#00D9F5' : 'rgba(255,255,255,0.25)' },
               { label: 'Sueño', value: answers.sleptWell ? 'Bien ✓' : 'Mal ✗', color: answers.sleptWell ? '#00D9F5' : 'rgba(255,255,255,0.25)' },
-              { label: 'Hidratación', value: answers.waterOk ? 'Ok ✓' : 'Mejorable ✗', color: answers.waterOk ? '#00D9F5' : 'rgba(255,255,255,0.25)' },
+              { label: 'Agua', value: `${answers.waterGlasses} vasos ${(answers.waterGlasses as number) >= 6 ? '✓' : '✗'}`, color: (answers.waterGlasses as number) >= 6 ? '#00D9F5' : 'rgba(255,255,255,0.25)' },
               { label: 'Estrés', value: `${answers.stressLevel}/5`, color: (answers.stressLevel as number) <= 2 ? '#00D9F5' : '#FFB800' },
             ].map(item => (
               <div key={item.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
@@ -279,6 +280,40 @@ export default function DailyClient() {
                     <span style={{ fontSize: '15px', fontWeight: 700 }}>{val ? 'Sí' : 'No'}</span>
                   </button>
                 ))}
+              </div>
+            )}
+
+            {q.type === 'glasses' && (
+              <div>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '24px' }}>
+                  <span style={{ fontSize: '56px', fontWeight: 900, color: q.color, letterSpacing: '-3px', lineHeight: 1 }}>
+                    {answers[q.key] as number}
+                  </span>
+                  <span style={{ fontSize: '18px', color: 'rgba(255,255,255,0.3)', fontWeight: 500 }}>vasos</span>
+                  <span style={{ fontSize: '14px', color: (answers[q.key] as number) >= 6 ? '#4CAF50' : (answers[q.key] as number) >= 4 ? '#FFB800' : '#FF6B6B', fontWeight: 600, marginLeft: '4px' }}>
+                    {(answers[q.key] as number) >= 8 ? '🔥 Perfecto' : (answers[q.key] as number) >= 6 ? '✓ Bien' : (answers[q.key] as number) >= 4 ? '⚡ Regular' : '✗ Poco'}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '20px' }}>
+                  {Array.from({ length: 10 }, (_, i) => i + 1).map(n => (
+                    <button
+                      key={n}
+                      onClick={() => setAnswers(prev => ({ ...prev, [q.key]: n }))}
+                      style={{
+                        width: '44px', height: '52px', borderRadius: '12px',
+                        border: (answers[q.key] as number) >= n ? `2px solid ${q.color}` : '2px solid rgba(255,255,255,0.08)',
+                        background: (answers[q.key] as number) >= n ? `${q.color}20` : 'rgba(255,255,255,0.02)',
+                        cursor: 'pointer', display: 'flex', flexDirection: 'column',
+                        alignItems: 'center', justifyContent: 'center', gap: '2px',
+                        transition: 'all 0.12s ease',
+                      }}
+                    >
+                      <span style={{ fontSize: '18px', filter: (answers[q.key] as number) >= n ? 'none' : 'grayscale(1) opacity(0.3)' }}>💧</span>
+                      <span style={{ fontSize: '9px', color: (answers[q.key] as number) >= n ? q.color : 'rgba(255,255,255,0.2)', fontWeight: 700 }}>{n}</span>
+                    </button>
+                  ))}
+                </div>
+                <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.25)' }}>Toca el último vaso que hayas bebido. 6+ = objetivo cumplido.</p>
               </div>
             )}
           </div>
