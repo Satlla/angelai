@@ -1,10 +1,16 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import dynamic from 'next/dynamic'
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip,
   ResponsiveContainer, CartesianGrid,
 } from 'recharts'
+
+const BodyScoreOrb = dynamic(() => import('@/components/BodyScoreOrb'), {
+  ssr: false,
+  loading: () => <div style={{ width: '100%', aspectRatio: '1', maxWidth: '280px', margin: '0 auto' }} />,
+})
 
 const BADGE_INFO: Record<string, { label: string }> = {
   primer_paso:    { label: 'Primer paso' },
@@ -919,80 +925,64 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
           </div>
         )}
 
-        {/* Stats row */}
+        {/* Body Score Orb */}
+        <div style={{
+          background: lightMode ? 'white' : '#0C0D16',
+          border: `1px solid ${lightMode ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.06)'}`,
+          borderRadius: '20px', padding: '8px', marginBottom: '10px', overflow: 'hidden',
+        }}>
+          <BodyScoreOrb score={score ?? 0} rank={rank ?? 'BRONCE'} />
+        </div>
+
+        {/* Stats row — Peso + Revisión */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
 
-          {/* Body Score */}
+          {/* Peso */}
           <div style={{
             background: lightMode ? 'white' : '#0C0D16', border: `1px solid ${lightMode ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.06)'}`,
             borderRadius: '16px', padding: '20px',
           }}>
             <p style={{
-              fontSize: '10px', letterSpacing: '1.5px', color: 'rgba(255,255,255,0.28)',
-              textTransform: 'uppercase', fontWeight: 600, marginBottom: '12px',
-            }}>Body Score</p>
-            <div style={{
-              fontSize: '48px', fontWeight: 800, letterSpacing: '-2px', lineHeight: 1, marginBottom: '8px',
-            }}>
-              {score}
+              fontSize: '10px', letterSpacing: '1.5px', color: lightMode ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.28)',
+              textTransform: 'uppercase', fontWeight: 600, marginBottom: '10px',
+            }}>Peso</p>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '4px' }}>
+              <span style={{ fontSize: '28px', fontWeight: 800, letterSpacing: '-1px', lineHeight: 1 }}>
+                {latest.weight}
+              </span>
+              <span style={{ fontSize: '13px', color: lightMode ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.3)', fontWeight: 500 }}>kg</span>
             </div>
-            <div style={{
-              display: 'inline-block', fontSize: '10px', fontWeight: 700, letterSpacing: '1.5px',
-              textTransform: 'uppercase', color: rankColor,
-              background: `${rankColor}18`, padding: '3px 8px', borderRadius: '4px',
-            }}>
-              {rank}
-            </div>
+            {weightDiff && (
+              <p style={{ fontSize: '12px', fontWeight: 600, color: parseFloat(weightDiff) < 0 ? '#00D9F5' : '#FF6B6B' }}>
+                {parseFloat(weightDiff) < 0 ? '' : '+'}{weightDiff} kg
+              </p>
+            )}
           </div>
 
-          {/* Peso + Revisión */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            <div style={{
-              background: lightMode ? 'white' : '#0C0D16', border: `1px solid ${lightMode ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.06)'}`,
-              borderRadius: '16px', padding: '20px', flex: 1,
-            }}>
-              <p style={{
-                fontSize: '10px', letterSpacing: '1.5px', color: 'rgba(255,255,255,0.28)',
-                textTransform: 'uppercase', fontWeight: 600, marginBottom: '10px',
-              }}>Peso</p>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '4px' }}>
-                <span style={{ fontSize: '28px', fontWeight: 800, letterSpacing: '-1px', lineHeight: 1 }}>
-                  {latest.weight}
-                </span>
-                <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.3)', fontWeight: 500 }}>kg</span>
-              </div>
-              {weightDiff && (
-                <p style={{
-                  fontSize: '12px', fontWeight: 600,
-                  color: parseFloat(weightDiff) < 0 ? '#00D9F5' : '#FF6B6B',
-                }}>
-                  {parseFloat(weightDiff) < 0 ? '' : '+'}{weightDiff} kg
-                </p>
-              )}
-            </div>
-            <div style={{
-              background: lightMode ? 'white' : '#0C0D16', border: `1px solid ${lightMode ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.06)'}`,
-              borderRadius: '16px', padding: '20px', flex: 1,
-            }}>
-              <p style={{
-                fontSize: '10px', letterSpacing: '1.5px', color: 'rgba(255,255,255,0.28)',
-                textTransform: 'uppercase', fontWeight: 600, marginBottom: '10px',
-              }}>Revisión</p>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '6px' }}>
-                <span style={{ fontSize: '28px', fontWeight: 800, letterSpacing: '-1px', lineHeight: 1 }}>
-                  {daysLeft === 0 ? '¡Ya!' : daysLeft}
-                </span>
-                {daysLeft > 0 && (
-                  <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.3)', fontWeight: 500 }}>días</span>
-                )}
-              </div>
+          {/* Revisión */}
+          <div style={{
+            background: lightMode ? 'white' : '#0C0D16', border: `1px solid ${lightMode ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.06)'}`,
+            borderRadius: '16px', padding: '20px',
+          }}>
+            <p style={{
+              fontSize: '10px', letterSpacing: '1.5px', color: lightMode ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.28)',
+              textTransform: 'uppercase', fontWeight: 600, marginBottom: '10px',
+            }}>Revisión</p>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '6px' }}>
+              <span style={{ fontSize: '28px', fontWeight: 800, letterSpacing: '-1px', lineHeight: 1 }}>
+                {daysLeft === 0 ? '¡Ya!' : daysLeft}
+              </span>
               {daysLeft > 0 && (
-                <div className="progress-bar">
-                  <div className="progress-fill" style={{ width: `${((15 - daysLeft) / 15) * 100}%` }} />
-                </div>
+                <span style={{ fontSize: '13px', color: lightMode ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.3)', fontWeight: 500 }}>días</span>
               )}
             </div>
+            {daysLeft > 0 && (
+              <div className="progress-bar">
+                <div className="progress-fill" style={{ width: `${((15 - daysLeft) / 15) * 100}%` }} />
+              </div>
+            )}
           </div>
+
         </div>
 
         {/* Streak + motivational */}
