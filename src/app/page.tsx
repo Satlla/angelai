@@ -1,5 +1,5 @@
 'use client'
-import { useState, Suspense } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 
 // ─── Medal SVG icons ──────────────────────────────────────────────────────────
@@ -113,6 +113,12 @@ function Landing() {
   const searchParams = useSearchParams()
   const inviteToken = searchParams.get('token')
 
+  // Restore saved email on mount
+  useEffect(() => {
+    const saved = localStorage.getItem('angelai_last_email')
+    if (saved) setEmail(saved)
+  }, [])
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!email) return
@@ -126,6 +132,7 @@ function Landing() {
       })
       const data = await res.json()
       if (!res.ok) { setError(data.error || 'Email no autorizado'); setLoading(false); return }
+      localStorage.setItem('angelai_last_email', email)
       router.push(data.hasProfile ? '/dashboard' : '/onboarding')
     } catch {
       setError('Error de conexión.')

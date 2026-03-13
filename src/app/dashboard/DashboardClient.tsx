@@ -27,7 +27,61 @@ type CheckIn = {
   customizationUsed?: boolean;
 }
 
-type Tab = 'overview' | 'diet' | 'shopping' | 'progress' | 'training' | 'history'
+type Tab = 'overview' | 'diet' | 'shopping' | 'progress' | 'training' | 'history' | 'coach'
+
+type DailyLogEntry = { date: string; disciplineScore: number | null; trainedToday: boolean }
+
+// ── Streak helpers ──────────────────────────────────────────────────────────
+function calcStreak(logs: DailyLogEntry[]): number {
+  if (!logs.length) return 0
+  const sorted = [...logs].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+  const today = new Date(); today.setHours(0, 0, 0, 0)
+  const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1)
+  const lastDate = new Date(sorted[0].date); lastDate.setHours(0, 0, 0, 0)
+  if (lastDate < yesterday) return 0
+  let streak = 0
+  let check = lastDate.getTime() === today.getTime() ? today : yesterday
+  for (const log of sorted) {
+    const d = new Date(log.date); d.setHours(0, 0, 0, 0)
+    if (d.getTime() === check.getTime()) {
+      streak++
+      check = new Date(check); check.setDate(check.getDate() - 1)
+    } else break
+  }
+  return streak
+}
+
+function weeksToSummer(): number {
+  const summer = new Date(new Date().getFullYear(), 5, 21) // June 21
+  const diff = summer.getTime() - Date.now()
+  return Math.max(0, Math.ceil(diff / (7 * 24 * 60 * 60 * 1000)))
+}
+
+function daysSinceLastLog(logs: DailyLogEntry[]): number {
+  if (!logs.length) return 999
+  const sorted = [...logs].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+  const last = new Date(sorted[0].date); last.setHours(0, 0, 0, 0)
+  const today = new Date(); today.setHours(0, 0, 0, 0)
+  return Math.floor((today.getTime() - last.getTime()) / 86400000)
+}
+
+const AGGRESSIVE_MSGS = [
+  (d: number, w: number) => `Llevas ${d} días sin aparecer. ¿Qué está pasando? ${w > 0 ? `Quedan ${w} semanas para verano.` : ''}`,
+  (d: number, w: number) => `${d} días desaparecido. Mientras tú descansas, otros entrenan. ${w > 0 ? `${w} semanas para verano. Espabila.` : 'Espabila.'}`,
+  (d: number, w: number) => `¿${d} días sin registrar? El cuerpo no se transforma solo. ${w > 0 ? `Te quedan ${w} semanas. Mueve el culo.` : 'Mueve el culo.'}`,
+]
+
+function getMotivationalMsg(days: number, streak: number): { text: string; emoji: string; color: string; bg: string } {
+  const w = weeksToSummer()
+  if (days === 0 && streak >= 7) return { text: `🔥 ${streak} días de racha. Eso es disciplina real. No la rompas.`, emoji: '🔥', color: '#FFB800', bg: 'rgba(255,184,0,0.08)' }
+  if (days === 0 && streak >= 3) return { text: `💪 ${streak} días seguidos. Vas bien. Sigue.`, emoji: '💪', color: '#4CAF50', bg: 'rgba(76,175,80,0.08)' }
+  if (days === 1) return { text: `Ayer no registraste. ¿Qué pasó? Hoy sin excusas.${w > 0 ? ` Quedan ${w} semanas para verano.` : ''}`, emoji: '⚠️', color: '#FFB800', bg: 'rgba(255,184,0,0.08)' }
+  if (days >= 2) {
+    const msg = AGGRESSIVE_MSGS[days % AGGRESSIVE_MSGS.length](days, w)
+    return { text: msg, emoji: '🚨', color: '#FF6B6B', bg: 'rgba(255,107,107,0.08)' }
+  }
+  return { text: '', emoji: '', color: '', bg: '' }
+}
 
 type ShoppingItem = {
   item: string;
@@ -95,7 +149,7 @@ type UserPreferences = {
   dietNotes: string | null
 }
 
-export default function DashboardClient({ user, checkIns, badges, daysLeft, preferences: initialPrefs, dailyReminderEnabled, hasLoggedToday }: {
+export default function DashboardClient({ user, checkIns, badges, daysLeft, preferences: initialPrefs, dailyReminderEnabled, hasLoggedToday, dailyLogs: initialDailyLogs }: {
   user: { id: string; email: string; name: string | null; profilePhotoUrl?: string | null }
   checkIns: CheckIn[]
   badges: { badge: string; earnedAt: string }[]
@@ -103,6 +157,7 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
   preferences: UserPreferences
   dailyReminderEnabled: boolean
   hasLoggedToday: boolean
+  dailyLogs: DailyLogEntry[]
 }) {
   const [activeTab, setActiveTab] = useState<Tab>('overview')
   const [pdfLoading, setPdfLoading] = useState(false)
@@ -135,8 +190,19 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
   const [lightMode, setLightMode] = useState(false)
   const [profilePhoto, setProfilePhoto] = useState<string | null>(user.profilePhotoUrl ?? null)
   const [showDailyReminder, setShowDailyReminder] = useState(false)
+  const [coachMessages, setCoachMessages] = useState<Array<{role: 'user'|'assistant'; content: string}>>([])
+  const [coachInput, setCoachInput] = useState('')
+  const [coachLoading, setCoachLoading] = useState(false)
+  const [doneExercises, setDoneExercises] = useState<Record<string, boolean>>(() => {
+    if (typeof window === 'undefined') return {}
+    try { return JSON.parse(localStorage.getItem(`ex_${checkIns[0]?.id}`) || '{}') } catch { return {} }
+  })
   const photoInputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
+
+  const streak = calcStreak(initialDailyLogs)
+  const daysSince = daysSinceLastLog(initialDailyLogs)
+  const motivMsg = getMotivationalMsg(daysSince, streak)
 
   useEffect(() => {
     const saved = localStorage.getItem('angelai_theme')
@@ -149,15 +215,16 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
   }, [lightMode])
 
   useEffect(() => {
-    if (!dailyReminderEnabled || hasLoggedToday) return
-    const hour = new Date().getHours()
-    if (hour >= 22) {
-      const dismissedKey = `reminder_dismissed_${new Date().toDateString()}`
-      if (!localStorage.getItem(dismissedKey)) {
-        setShowDailyReminder(true)
-      }
+    if (!dailyReminderEnabled) return
+    const dismissedKey = `reminder_dismissed_${new Date().toDateString()}`
+    if (localStorage.getItem(dismissedKey)) return
+    // Show aggressively if 2+ days without log, or after 22:00 if not logged today
+    if (daysSince >= 2) {
+      setShowDailyReminder(true)
+    } else if (!hasLoggedToday && new Date().getHours() >= 22) {
+      setShowDailyReminder(true)
     }
-  }, [dailyReminderEnabled, hasLoggedToday])
+  }, [dailyReminderEnabled, hasLoggedToday, daysSince])
 
   async function savePreferences(updated: UserPreferences) {
     setPrefsSaving(true)
@@ -193,7 +260,7 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
 
   const latest = checkIns[0]
   const prev = checkIns[1]
-  const dietData: DietPlan | null = latest.dietPlan ? JSON.parse(latest.dietPlan) as DietPlan : null
+  const dietData: DietPlan | null = (() => { try { return latest.dietPlan ? JSON.parse(latest.dietPlan) as DietPlan : null } catch { return null } })()
   const score = latest.bodyScore || 0
   const rank = latest.rank || 'BRONCE'
   const rankColor = RANK_COLORS[rank] || '#B44FFF'
@@ -239,6 +306,36 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
       setProfilePhoto(data.url)
     }
     e.target.value = ''
+  }
+
+  async function sendCoachMessage() {
+    if (!coachInput.trim() || coachLoading) return
+    const userMsg = coachInput.trim()
+    setCoachInput('')
+    setCoachLoading(true)
+    const newHistory = [...coachMessages, { role: 'user' as const, content: userMsg }]
+    setCoachMessages(newHistory)
+    try {
+      const res = await fetch('/api/coach-chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: userMsg, history: coachMessages }),
+      })
+      const data = await res.json()
+      setCoachMessages([...newHistory, { role: 'assistant', content: data.reply || 'Error al responder.' }])
+    } catch {
+      setCoachMessages([...newHistory, { role: 'assistant', content: 'Error de conexión.' }])
+    } finally {
+      setCoachLoading(false)
+    }
+  }
+
+  function toggleExerciseDone(key: string) {
+    setDoneExercises(prev => {
+      const updated = { ...prev, [key]: !prev[key] }
+      try { localStorage.setItem(`ex_${checkIns[0]?.id}`, JSON.stringify(updated)) } catch { /* */ }
+      return updated
+    })
   }
 
   async function sendAdjustMessage() {
@@ -666,6 +763,7 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
         position: 'sticky', top: 0, zIndex: 100,
         background: lightMode ? 'rgba(245,245,247,0.94)' : 'rgba(7,8,15,0.94)', backdropFilter: 'blur(20px)',
         borderBottom: `1px solid ${lightMode ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.05)'}`,
+        paddingTop: 'env(safe-area-inset-top)',
       }}>
         <div style={{
           maxWidth: '480px', margin: '0 auto', padding: '14px 20px',
@@ -732,52 +830,38 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
         </div>
       </nav>
 
-      {/* Daily reminder banner */}
+      {/* Daily reminder banner — top strip */}
       {showDailyReminder && (
         <div style={{
-          position: 'fixed', bottom: '80px', left: '50%', transform: 'translateX(-50%)',
-          width: 'calc(100% - 40px)', maxWidth: '440px', zIndex: 200,
-          background: 'linear-gradient(135deg, #1a0a2e 0%, #0d0d1a 100%)',
-          border: '1px solid rgba(180,79,255,0.35)',
-          borderRadius: '16px', padding: '16px 18px',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(180,79,255,0.1)',
-          display: 'flex', alignItems: 'center', gap: '12px',
+          background: daysSince >= 2 ? 'rgba(255,107,107,0.12)' : 'rgba(180,79,255,0.1)',
+          borderBottom: `1px solid ${daysSince >= 2 ? 'rgba(255,107,107,0.25)' : 'rgba(180,79,255,0.25)'}`,
+          padding: '10px 20px',
+          display: 'flex', alignItems: 'center', gap: '10px',
         }}>
-          <span style={{ fontSize: '24px', flexShrink: 0 }}>🌙</span>
-          <div style={{ flex: 1 }}>
-            <p style={{ fontSize: '14px', fontWeight: 600, color: 'white', marginBottom: '2px' }}>
-              ¿Cómo ha ido el día?
-            </p>
-            <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.45)' }}>
-              Registra tu seguimiento de hoy
-            </p>
-          </div>
-          <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
-            <button
-              onClick={() => {
-                const key = `reminder_dismissed_${new Date().toDateString()}`
-                localStorage.setItem(key, '1')
-                setShowDailyReminder(false)
-              }}
-              style={{
-                background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: '8px',
-                color: 'rgba(255,255,255,0.4)', fontSize: '12px', padding: '6px 10px',
-                cursor: 'pointer', fontFamily: 'inherit',
-              }}
-            >
-              Luego
-            </button>
-            <button
-              onClick={() => router.push('/daily')}
-              style={{
-                background: '#B44FFF', border: 'none', borderRadius: '8px',
-                color: 'white', fontSize: '12px', fontWeight: 600, padding: '6px 12px',
-                cursor: 'pointer', fontFamily: 'inherit',
-              }}
-            >
-              Registrar
-            </button>
-          </div>
+          <span style={{ fontSize: '16px', flexShrink: 0 }}>{daysSince >= 2 ? '🚨' : '🌙'}</span>
+          <p style={{ fontSize: '12px', fontWeight: 600, color: daysSince >= 2 ? '#FF6B6B' : '#B44FFF', flex: 1, lineHeight: 1.4 }}>
+            {daysSince >= 2
+              ? `${daysSince} días sin registrar. ¿Qué está pasando?`
+              : daysSince === 1 ? 'Ayer no registraste. Hoy sin excusas.'
+              : '¿Cómo ha ido el día?'}
+          </p>
+          <button
+            onClick={() => router.push('/daily')}
+            style={{ background: daysSince >= 2 ? '#FF6B6B' : '#B44FFF', border: 'none', borderRadius: '6px', color: 'white', fontSize: '11px', fontWeight: 700, padding: '5px 10px', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}
+          >
+            Registrar
+          </button>
+          <button
+            onClick={() => {
+              const key = `reminder_dismissed_${new Date().toDateString()}`
+              localStorage.setItem(key, '1')
+              setShowDailyReminder(false)
+            }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: daysSince >= 2 ? 'rgba(255,107,107,0.5)' : 'rgba(180,79,255,0.5)', fontSize: '16px', padding: '0 2px', lineHeight: 1, flexShrink: 0 }}
+            aria-label="Cerrar"
+          >
+            ×
+          </button>
         </div>
       )}
 
@@ -835,7 +919,7 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
 
           {/* Body Score */}
           <div style={{
-            background: '#0C0D16', border: '1px solid rgba(255,255,255,0.06)',
+            background: lightMode ? 'white' : '#0C0D16', border: `1px solid ${lightMode ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.06)'}`,
             borderRadius: '16px', padding: '20px',
           }}>
             <p style={{
@@ -859,7 +943,7 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
           {/* Peso + Revisión */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <div style={{
-              background: '#0C0D16', border: '1px solid rgba(255,255,255,0.06)',
+              background: lightMode ? 'white' : '#0C0D16', border: `1px solid ${lightMode ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.06)'}`,
               borderRadius: '16px', padding: '20px', flex: 1,
             }}>
               <p style={{
@@ -882,7 +966,7 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
               )}
             </div>
             <div style={{
-              background: '#0C0D16', border: '1px solid rgba(255,255,255,0.06)',
+              background: lightMode ? 'white' : '#0C0D16', border: `1px solid ${lightMode ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.06)'}`,
               borderRadius: '16px', padding: '20px', flex: 1,
             }}>
               <p style={{
@@ -906,10 +990,35 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
           </div>
         </div>
 
+        {/* Streak + motivational */}
+        <div style={{ display: 'grid', gridTemplateColumns: streak > 0 ? '1fr 2fr' : '1fr', gap: '10px', marginBottom: '10px' }}>
+          {streak > 0 && (
+            <div style={{
+              background: lightMode ? 'white' : '#0C0D16', border: `1px solid ${streak >= 7 ? 'rgba(255,184,0,0.3)' : 'rgba(255,255,255,0.06)'}`,
+              borderRadius: '16px', padding: '16px', textAlign: 'center',
+            }}>
+              <div style={{ fontSize: '32px', fontWeight: 900, letterSpacing: '-1px', color: streak >= 7 ? '#FFB800' : streak >= 3 ? '#B44FFF' : 'white', lineHeight: 1 }}>{streak}</div>
+              <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '1px', marginTop: '4px', fontWeight: 600 }}>días de racha</div>
+              <div style={{ fontSize: '18px', marginTop: '6px' }}>{streak >= 14 ? '🔥🔥' : streak >= 7 ? '🔥' : streak >= 3 ? '⚡' : '✨'}</div>
+            </div>
+          )}
+          {motivMsg.text && (
+            <div style={{
+              background: motivMsg.bg,
+              border: `1px solid ${motivMsg.color}25`,
+              borderRadius: '16px', padding: '16px',
+              display: 'flex', alignItems: 'center', gap: '12px',
+            }}>
+              <span style={{ fontSize: '24px', flexShrink: 0 }}>{motivMsg.emoji}</span>
+              <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.8)', lineHeight: 1.5, fontWeight: 500 }}>{motivMsg.text}</p>
+            </div>
+          )}
+        </div>
+
         {/* Badges */}
         {badges.length > 0 && (
           <div style={{
-            background: '#0C0D16', border: '1px solid rgba(255,255,255,0.06)',
+            background: lightMode ? 'white' : '#0C0D16', border: `1px solid ${lightMode ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.06)'}`,
             borderRadius: '16px', padding: '20px', marginBottom: '10px',
           }}>
             <p style={{
@@ -936,7 +1045,7 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
         {/* AI Analysis */}
         {latest.analysis && (
           <div style={{
-            background: '#0C0D16', border: '1px solid rgba(255,255,255,0.06)',
+            background: lightMode ? 'white' : '#0C0D16', border: `1px solid ${lightMode ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.06)'}`,
             borderRadius: '16px', padding: '20px', marginBottom: '24px',
           }}>
             <p style={{
@@ -957,7 +1066,7 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
         {activeTab === 'overview' && dietData && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <div style={{
-              background: '#0C0D16', border: '1px solid rgba(255,255,255,0.06)',
+              background: lightMode ? 'white' : '#0C0D16', border: `1px solid ${lightMode ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.06)'}`,
               borderRadius: '16px', padding: '20px',
             }}>
               <p style={{
@@ -984,7 +1093,7 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
 
             {dietData.supplements?.length > 0 && (
               <div style={{
-                background: '#0C0D16', border: '1px solid rgba(255,255,255,0.06)',
+                background: lightMode ? 'white' : '#0C0D16', border: `1px solid ${lightMode ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.06)'}`,
                 borderRadius: '16px', padding: '20px',
               }}>
                 <p style={{
@@ -1003,7 +1112,7 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
             {/* TDEE info */}
             {dietData.tdee && (
               <div style={{
-                background: '#0C0D16', border: '1px solid rgba(255,255,255,0.06)',
+                background: lightMode ? 'white' : '#0C0D16', border: `1px solid ${lightMode ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.06)'}`,
                 borderRadius: '16px', padding: '16px 20px',
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
               }}>
@@ -1030,7 +1139,7 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
             {/* Plan semanal */}
             {dietData.weeklyPlan && (
               <div style={{
-                background: '#0C0D16', border: '1px solid rgba(255,255,255,0.06)',
+                background: lightMode ? 'white' : '#0C0D16', border: `1px solid ${lightMode ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.06)'}`,
                 borderRadius: '16px', padding: '20px',
               }}>
                 <p style={{
@@ -1045,7 +1154,7 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
 
             {dietData.tips?.length > 0 && (
               <div style={{
-                background: '#0C0D16', border: '1px solid rgba(255,255,255,0.06)',
+                background: lightMode ? 'white' : '#0C0D16', border: `1px solid ${lightMode ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.06)'}`,
                 borderRadius: '16px', padding: '20px',
               }}>
                 <p style={{
@@ -1067,7 +1176,7 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
         {activeTab === 'diet' && dietData?.diet && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <div style={{
-              background: '#0C0D16', border: '1px solid rgba(255,255,255,0.06)',
+              background: lightMode ? 'white' : '#0C0D16', border: `1px solid ${lightMode ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.06)'}`,
               borderRadius: '16px', overflow: 'hidden',
             }}>
               <div style={{ padding: '20px 20px 0' }}>
@@ -1294,7 +1403,7 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {!dietData?.shoppingList?.length ? (
               <div style={{
-                background: '#0C0D16', border: '1px solid rgba(255,255,255,0.06)',
+                background: lightMode ? 'white' : '#0C0D16', border: `1px solid ${lightMode ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.06)'}`,
                 borderRadius: '16px', padding: '40px 20px', textAlign: 'center',
               }}>
                 <svg width="36" height="36" viewBox="0 0 36 36" fill="none" style={{ margin: '0 auto 16px', display: 'block' }}>
@@ -1342,7 +1451,7 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
                   {/* Categories with checkboxes */}
                   {Object.entries(categories).map(([cat, items]) => (
                     <div key={cat} style={{
-                      background: '#0C0D16', border: '1px solid rgba(255,255,255,0.06)',
+                      background: lightMode ? 'white' : '#0C0D16', border: `1px solid ${lightMode ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.06)'}`,
                       borderRadius: '16px', overflow: 'hidden',
                     }}>
                       <p style={{
@@ -1412,7 +1521,7 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
 
             {chartData.length < 2 && (
               <div style={{
-                background: '#0C0D16', border: '1px solid rgba(255,255,255,0.06)',
+                background: lightMode ? 'white' : '#0C0D16', border: `1px solid ${lightMode ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.06)'}`,
                 borderRadius: '16px', padding: '32px 20px', textAlign: 'center',
               }}>
                 <div style={{
@@ -1435,7 +1544,7 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
               <>
                 {/* Weight chart */}
                 <div style={{
-                  background: '#0C0D16', border: '1px solid rgba(255,255,255,0.06)',
+                  background: lightMode ? 'white' : '#0C0D16', border: `1px solid ${lightMode ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.06)'}`,
                   borderRadius: '16px', padding: '20px',
                 }}>
                   <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '20px' }}>
@@ -1499,7 +1608,7 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
 
                 {/* Body Score chart */}
                 <div style={{
-                  background: '#0C0D16', border: '1px solid rgba(255,255,255,0.06)',
+                  background: lightMode ? 'white' : '#0C0D16', border: `1px solid ${lightMode ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.06)'}`,
                   borderRadius: '16px', padding: '20px',
                 }}>
                   <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '20px' }}>
@@ -1568,7 +1677,7 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
                 {/* Measurements mini chart if data exists */}
                 {checkIns.some(c => c.waist) && (
                   <div style={{
-                    background: '#0C0D16', border: '1px solid rgba(255,255,255,0.06)',
+                    background: lightMode ? 'white' : '#0C0D16', border: `1px solid ${lightMode ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.06)'}`,
                     borderRadius: '16px', padding: '20px',
                   }}>
                     <p style={{
@@ -1623,7 +1732,7 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
 
               {/* Preferencias panel */}
               <div style={{
-                background: '#0C0D16', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '16px',
+                background: lightMode ? 'white' : '#0C0D16', border: `1px solid ${lightMode ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.06)'}`, borderRadius: '16px',
               }}>
                 <div
                   onClick={() => { setPrefsOpen(!prefsOpen); setEditPrefs(prefs) }}
@@ -1796,7 +1905,7 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
 
               {!training ? (
                 <div style={{
-                  background: '#0C0D16', border: '1px solid rgba(255,255,255,0.06)',
+                  background: lightMode ? 'white' : '#0C0D16', border: `1px solid ${lightMode ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.06)'}`,
                   borderRadius: '16px', padding: '32px 20px', textAlign: 'center',
                 }}>
                   <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.35)' }}>
@@ -1807,7 +1916,7 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
                 <>
                   {/* Header rutina */}
                   <div style={{
-                    background: '#0C0D16', border: '1px solid rgba(255,255,255,0.06)',
+                    background: lightMode ? 'white' : '#0C0D16', border: `1px solid ${lightMode ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.06)'}`,
                     borderRadius: '16px', padding: '20px',
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                   }}>
@@ -1845,6 +1954,8 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
                       onSwapInputChange={setSwapInput}
                       onDislike={addDislikedExercise}
                       onLike={addLikedExercise}
+                      doneExercises={doneExercises}
+                      onToggleDone={toggleExerciseDone}
                     />
                   ))}
                 </>
@@ -1876,17 +1987,98 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
             </div>
           </div>
         )}
+
+        {/* ── TAB: COACH ── */}
+        {activeTab === 'coach' && (
+          <div style={{ paddingTop: '24px', paddingBottom: '120px', display: 'flex', flexDirection: 'column', height: 'calc(100vh - 160px)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+              <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'linear-gradient(135deg, #B44FFF, #7B6FFF)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>🤖</div>
+              <div>
+                <div style={{ fontSize: '16px', fontWeight: 700, color: 'white' }}>Coach IA</div>
+                <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.35)' }}>Pregunta lo que quieras sobre dieta y entreno</div>
+              </div>
+            </div>
+
+            {/* Messages */}
+            <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '12px' }}>
+              {coachMessages.length === 0 && (
+                <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '14px 14px 14px 4px', padding: '14px 16px' }}>
+                  <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.65)', lineHeight: 1.6, margin: 0 }}>
+                    Soy tu coach personal. Pregúntame lo que necesites: si puedes comer pizza el sábado, cómo progresar en sentadilla, qué suplemento tomar... Sin filtros, te digo la verdad.
+                  </p>
+                </div>
+              )}
+              {coachMessages.map((msg, i) => (
+                <div key={i} style={{ display: 'flex', justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
+                  <div style={{
+                    maxWidth: '88%', padding: '11px 14px',
+                    borderRadius: msg.role === 'user' ? '14px 14px 4px 14px' : '14px 14px 14px 4px',
+                    background: msg.role === 'user' ? 'rgba(180,79,255,0.18)' : 'rgba(255,255,255,0.05)',
+                    border: `1px solid ${msg.role === 'user' ? 'rgba(180,79,255,0.3)' : 'rgba(255,255,255,0.08)'}`,
+                    fontSize: '14px', lineHeight: 1.6,
+                    color: msg.role === 'user' ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.75)',
+                    whiteSpace: 'pre-wrap',
+                  }}>
+                    {msg.content}
+                  </div>
+                </div>
+              ))}
+              {coachLoading && (
+                <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+                  <div style={{ padding: '12px 16px', borderRadius: '14px 14px 14px 4px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', display: 'flex', gap: '5px', alignItems: 'center' }}>
+                    {[0, 150, 300].map(d => (
+                      <div key={d} style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'rgba(180,79,255,0.6)', animation: `bounce 1.2s ${d}ms infinite` }} />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Quick prompts */}
+            {coachMessages.length === 0 && (
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '10px' }}>
+                {['¿Puedo comer carbos por la noche?', '¿Cómo subo la proteína?', 'Tengo agujetas, ¿entreno?'].map(prompt => (
+                  <button key={prompt} onClick={() => { setCoachInput(prompt) }} style={{ fontSize: '12px', padding: '6px 12px', background: 'rgba(180,79,255,0.08)', border: '1px solid rgba(180,79,255,0.2)', borderRadius: '20px', color: 'rgba(255,255,255,0.6)', cursor: 'pointer', fontFamily: 'inherit' }}>
+                    {prompt}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Input */}
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <textarea
+                value={coachInput}
+                onChange={e => setCoachInput(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendCoachMessage() } }}
+                placeholder="Pregúntame algo..."
+                rows={2}
+                disabled={coachLoading}
+                style={{ flex: 1, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', color: 'white', padding: '10px 14px', fontSize: '14px', fontFamily: 'inherit', resize: 'none', outline: 'none', lineHeight: 1.5 }}
+              />
+              <button
+                onClick={sendCoachMessage}
+                disabled={coachLoading || !coachInput.trim()}
+                style={{ width: '44px', height: '44px', alignSelf: 'flex-end', flexShrink: 0, borderRadius: '12px', background: coachLoading || !coachInput.trim() ? 'rgba(180,79,255,0.08)' : '#B44FFF', border: 'none', color: 'white', cursor: coachLoading || !coachInput.trim() ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              </button>
+            </div>
+          </div>
+        )}
+
       </div>
 
       {/* Bottom Tab Bar */}
       <div className="tab-bar">
-        <div style={{ maxWidth: '480px', margin: '0 auto', display: 'flex', padding: '0 4px' }}>
+        <div style={{ maxWidth: '480px', margin: '0 auto', display: 'flex', padding: '0 2px', overflowX: 'auto', scrollbarWidth: 'none' }}>
           {([
             { key: 'overview',  label: 'Resumen',  icon: OverviewIcon },
             { key: 'diet',      label: 'Dieta',    icon: DietIcon },
             { key: 'shopping',  label: 'Compra',   icon: ShoppingIcon },
             { key: 'progress',  label: 'Progreso', icon: ChartIcon },
             { key: 'training',  label: 'Entreno',  icon: TrainingIcon },
+            { key: 'coach',     label: 'Coach',    icon: CoachIcon },
           ] as { key: Tab; label: string; icon: () => React.JSX.Element }[]).map(tab => {
             const isActive = activeTab === tab.key
             return (
@@ -2032,6 +2224,7 @@ function HistoryCard({ checkIn, plan, prev, isLatest, lightMode }: {
 function TrainingDay({
   dia, index, disliked, swappingExercise, swapInput,
   onSwapOpen, onSwapClose, onSwapInputChange, onDislike, onLike,
+  doneExercises, onToggleDone,
 }: {
   dia: { dia: string; nombre: string; ejercicios: { nombre: string; series: number; reps: string }[] }
   index: number
@@ -2043,14 +2236,18 @@ function TrainingDay({
   onSwapInputChange: (v: string) => void
   onDislike: (name: string) => void
   onLike: (name: string) => void
+  doneExercises: Record<string, boolean>
+  onToggleDone: (key: string) => void
 }) {
   const [open, setOpen] = useState(false)
   const colors = ['#B44FFF', '#00D9F5', '#7B6FFF', '#FFD700', '#FF6B6B']
   const color = colors[index % colors.length]
+  const doneCount = dia.ejercicios.filter(e => doneExercises[`${index}_${e.nombre}`]).length
+  const allDone = doneCount === dia.ejercicios.length
 
   return (
     <div style={{
-      background: '#0C0D16', border: '1px solid rgba(255,255,255,0.06)',
+      background: '#0C0D16', border: `1px solid rgba(255,255,255,0.06)`,
       borderRadius: '16px', overflow: 'hidden',
     }}>
       <div
@@ -2073,8 +2270,8 @@ function TrainingDay({
             <div style={{ fontSize: '14px', fontWeight: 600, color: 'rgba(255,255,255,0.85)', marginBottom: '2px' }}>
               {dia.nombre}
             </div>
-            <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.28)' }}>
-              {dia.ejercicios.length} ejercicios
+            <div style={{ fontSize: '12px', color: allDone ? '#4CAF50' : 'rgba(255,255,255,0.28)' }}>
+              {allDone ? '✓ Completado' : `${doneCount}/${dia.ejercicios.length} ejercicios`}
             </div>
           </div>
         </div>
@@ -2117,6 +2314,19 @@ function TrainingDay({
                     }}>
                       {ej.series}×{ej.reps}
                     </span>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onToggleDone(`${index}_${ej.nombre}`) }}
+                      title="Marcar como hecho"
+                      style={{
+                        width: '26px', height: '26px', borderRadius: '6px', border: 'none',
+                        background: doneExercises[`${index}_${ej.nombre}`] ? 'rgba(76,175,80,0.2)' : 'rgba(255,255,255,0.05)',
+                        color: doneExercises[`${index}_${ej.nombre}`] ? '#4CAF50' : 'rgba(255,255,255,0.25)',
+                        cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontFamily: 'inherit', fontSize: '14px', transition: 'all 0.15s ease',
+                      }}
+                    >
+                      ✓
+                    </button>
                     <button
                       onClick={(e) => { e.stopPropagation(); isSwapping ? onSwapClose() : onSwapOpen(ej.nombre) }}
                       title="No me gusta este ejercicio"
@@ -2339,6 +2549,15 @@ function ShoppingIcon() {
       <path d="M3 4h1.5l2 8h9l1.5-6H6.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
       <circle cx="8.5" cy="15.5" r="1" fill="currentColor"/>
       <circle cx="14.5" cy="15.5" r="1" fill="currentColor"/>
+    </svg>
+  )
+}
+
+function CoachIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+      <path d="M4 4h12a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H8l-4 3V5a1 1 0 0 1 1-1z" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M7 9h6M7 7h4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
     </svg>
   )
 }
