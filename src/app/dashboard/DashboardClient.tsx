@@ -204,6 +204,8 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
   const [coachMessages, setCoachMessages] = useState<Array<{role: 'user'|'assistant'; content: string}>>([])
   const [coachInput, setCoachInput] = useState('')
   const [coachLoading, setCoachLoading] = useState(false)
+  const [showJarvis, setShowJarvis] = useState(false)
+  const [jarvisGreeting, setJarvisGreeting] = useState(false)
   const [doneExercises, setDoneExercises] = useState<Record<string, boolean>>(() => {
     if (typeof window === 'undefined') return {}
     try { return JSON.parse(localStorage.getItem(`ex_${checkIns[0]?.id}`) || '{}') } catch { return {} }
@@ -224,6 +226,17 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
     document.documentElement.setAttribute('data-theme', lightMode ? 'light' : 'dark')
     localStorage.setItem('angelai_theme', lightMode ? 'light' : 'dark')
   }, [lightMode])
+
+  useEffect(() => {
+    // Dr. Jarvis greeting — show once per day unless permanently dismissed
+    if (!localStorage.getItem('jarvis_no_molestar')) {
+      const greetKey = `jarvis_greeted_${new Date().toDateString()}`
+      if (!localStorage.getItem(greetKey)) {
+        setTimeout(() => setJarvisGreeting(true), 1500)
+        localStorage.setItem(greetKey, '1')
+      }
+    }
+  }, [])
 
   useEffect(() => {
     if (!dailyReminderEnabled) return
@@ -1964,14 +1977,13 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
 
       {/* Bottom Tab Bar */}
       <div className="tab-bar">
-        <div style={{ maxWidth: '480px', margin: '0 auto', display: 'flex', padding: '0 2px', overflowX: 'auto', scrollbarWidth: 'none' }}>
+        <div style={{ maxWidth: '480px', margin: '0 auto', display: 'flex', padding: '0 2px' }}>
           {([
             { key: 'overview',  label: 'Resumen',  icon: OverviewIcon },
             { key: 'diet',      label: 'Dieta',    icon: DietIcon },
             { key: 'shopping',  label: 'Compra',   icon: ShoppingIcon },
             { key: 'progress',  label: 'Progreso', icon: ChartIcon },
             { key: 'training',  label: 'Entreno',  icon: TrainingIcon },
-            { key: 'coach',     label: 'Coach',    icon: CoachIcon },
           ] as { key: Tab; label: string; icon: () => React.JSX.Element }[]).map(tab => {
             const isActive = activeTab === tab.key
             return (
@@ -1994,6 +2006,166 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
           })}
         </div>
       </div>
+
+      {/* ── Dr. Jarvis floating bubble ── */}
+
+      {/* Greeting speech bubble */}
+      {jarvisGreeting && !showJarvis && (
+        <div style={{
+          position: 'fixed', bottom: '100px', right: '16px', zIndex: 300,
+          maxWidth: '240px', animation: 'slideUpModal 0.3s ease',
+        }}>
+          <div style={{
+            background: '#1a0a2e', border: '1px solid rgba(180,79,255,0.4)',
+            borderRadius: '16px 16px 4px 16px', padding: '14px 16px',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+              <span style={{ fontSize: '16px' }}>🤖</span>
+              <span style={{ fontSize: '12px', fontWeight: 700, color: '#B44FFF' }}>Dr. Jarvis</span>
+            </div>
+            <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.8)', lineHeight: 1.5, marginBottom: '12px' }}>
+              Si necesitas cambiar algo de la dieta o tienes alguna duda con tu entreno, háblame 💪
+            </p>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                onClick={() => { setJarvisGreeting(false); setShowJarvis(true) }}
+                style={{ flex: 1, background: '#B44FFF', border: 'none', borderRadius: '8px', color: 'white', fontSize: '12px', fontWeight: 700, padding: '7px', cursor: 'pointer', fontFamily: 'inherit' }}
+              >
+                Hablar
+              </button>
+              <button
+                onClick={() => { localStorage.setItem('jarvis_no_molestar', '1'); setJarvisGreeting(false) }}
+                style={{ flex: 1, background: 'rgba(255,255,255,0.06)', border: 'none', borderRadius: '8px', color: 'rgba(255,255,255,0.4)', fontSize: '11px', padding: '7px', cursor: 'pointer', fontFamily: 'inherit' }}
+              >
+                No molestar
+              </button>
+            </div>
+          </div>
+          {/* Arrow pointing to FAB */}
+          <div style={{ position: 'absolute', bottom: '-6px', right: '18px', width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderTop: '6px solid rgba(180,79,255,0.4)' }} />
+        </div>
+      )}
+
+      {/* FAB button */}
+      {!showJarvis && (
+        <button
+          onClick={() => { setJarvisGreeting(false); setShowJarvis(true) }}
+          style={{
+            position: 'fixed', bottom: '90px', right: '16px', zIndex: 300,
+            width: '52px', height: '52px', borderRadius: '50%',
+            background: 'linear-gradient(135deg, #B44FFF, #7B2FBE)',
+            border: 'none', cursor: 'pointer',
+            boxShadow: '0 4px 20px rgba(180,79,255,0.5)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: '22px',
+            animation: jarvisGreeting ? 'pulse 2s infinite' : 'none',
+          }}
+          aria-label="Dr. Jarvis"
+        >
+          🤖
+        </button>
+      )}
+
+      {/* Chat overlay */}
+      {showJarvis && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 400,
+          background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+        }} onClick={e => { if (e.target === e.currentTarget) setShowJarvis(false) }}>
+          <div style={{
+            width: '100%', maxWidth: '480px', height: '80vh',
+            background: '#0C0D16', borderRadius: '24px 24px 0 0',
+            border: '1px solid rgba(180,79,255,0.2)',
+            display: 'flex', flexDirection: 'column',
+            animation: 'slideUpModal 0.3s ease',
+            paddingBottom: 'env(safe-area-inset-bottom)',
+          }}>
+            {/* Header */}
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg, #B44FFF, #7B2FBE)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0 }}>🤖</div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: '15px', fontWeight: 700, color: 'white' }}>Dr. Jarvis</div>
+                <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.35)' }}>Tu asistente de dieta y entreno</div>
+              </div>
+              <button onClick={() => setShowJarvis(false)} style={{ background: 'rgba(255,255,255,0.06)', border: 'none', borderRadius: '8px', width: '32px', height: '32px', cursor: 'pointer', color: 'rgba(255,255,255,0.5)', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
+            </div>
+
+            {/* Messages */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {coachMessages.length === 0 && (
+                <div style={{ background: 'rgba(180,79,255,0.06)', border: '1px solid rgba(180,79,255,0.15)', borderRadius: '14px 14px 14px 4px', padding: '14px 16px' }}>
+                  <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.7)', lineHeight: 1.6, margin: 0 }}>
+                    Hola, soy el Dr. Jarvis. Pregúntame lo que necesites sobre tu dieta o entrenamiento. Sin filtros, te digo la verdad.
+                  </p>
+                </div>
+              )}
+              {coachMessages.map((msg, i) => (
+                <div key={i} style={{ display: 'flex', justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
+                  <div style={{
+                    maxWidth: '88%', padding: '11px 14px',
+                    borderRadius: msg.role === 'user' ? '14px 14px 4px 14px' : '14px 14px 14px 4px',
+                    background: msg.role === 'user' ? 'rgba(180,79,255,0.18)' : 'rgba(255,255,255,0.05)',
+                    border: `1px solid ${msg.role === 'user' ? 'rgba(180,79,255,0.3)' : 'rgba(255,255,255,0.08)'}`,
+                    fontSize: '14px', lineHeight: 1.6,
+                    color: msg.role === 'user' ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.8)',
+                  }}>
+                    {msg.role === 'assistant'
+                      ? <span dangerouslySetInnerHTML={{ __html: msg.content
+                          .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                          .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                          .replace(/\n/g, '<br/>') }} />
+                      : msg.content
+                    }
+                  </div>
+                </div>
+              ))}
+              {coachLoading && (
+                <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+                  <div style={{ padding: '12px 16px', borderRadius: '14px 14px 14px 4px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', display: 'flex', gap: '5px', alignItems: 'center' }}>
+                    {[0, 150, 300].map(d => (
+                      <div key={d} style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'rgba(180,79,255,0.6)', animation: `bounce 1.2s ${d}ms infinite` }} />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Quick prompts */}
+            {coachMessages.length === 0 && (
+              <div style={{ padding: '0 16px 10px', display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                {['¿Puedo comer carbos por la noche?', '¿Cómo subo la proteína?', 'Tengo agujetas, ¿entreno?'].map(prompt => (
+                  <button key={prompt} onClick={() => setCoachInput(prompt)} style={{ fontSize: '12px', padding: '6px 12px', background: 'rgba(180,79,255,0.08)', border: '1px solid rgba(180,79,255,0.2)', borderRadius: '20px', color: 'rgba(255,255,255,0.6)', cursor: 'pointer', fontFamily: 'inherit' }}>
+                    {prompt}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Input */}
+            <div style={{ padding: '12px 16px', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', gap: '8px' }}>
+              <textarea
+                value={coachInput}
+                onChange={e => setCoachInput(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendCoachMessage() } }}
+                placeholder="Pregunta al Dr. Jarvis..."
+                rows={2}
+                disabled={coachLoading}
+                style={{ flex: 1, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', color: 'white', padding: '10px 14px', fontSize: '14px', fontFamily: 'inherit', resize: 'none', outline: 'none', lineHeight: 1.5 }}
+              />
+              <button
+                onClick={sendCoachMessage}
+                disabled={coachLoading || !coachInput.trim()}
+                style={{ width: '44px', height: '44px', alignSelf: 'flex-end', flexShrink: 0, borderRadius: '12px', background: coachLoading || !coachInput.trim() ? 'rgba(180,79,255,0.08)' : '#B44FFF', border: 'none', color: 'white', cursor: coachLoading || !coachInput.trim() ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }
