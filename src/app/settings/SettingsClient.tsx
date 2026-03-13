@@ -1,5 +1,5 @@
 'use client'
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 
 
@@ -42,8 +42,24 @@ export default function SettingsClient({
   const [error, setError] = useState('')
   const [profilePhoto, setProfilePhoto] = useState<string | null>(initialPhotoUrl)
   const [photoUploading, setPhotoUploading] = useState(false)
+  const [lm, setLm] = useState(false)
   const photoInputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
+
+  useEffect(() => {
+    setLm(localStorage.getItem('angelai_theme') === 'light')
+  }, [])
+
+  const bg = lm ? '#F5F5F7' : '#07080F'
+  const cardBg = lm ? '#ffffff' : '#0C0D16'
+  const cardBorder = lm ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.06)'
+  const text = lm ? '#1a1a2e' : 'white'
+  const textMuted = lm ? 'rgba(0,0,0,0.45)' : 'rgba(255,255,255,0.55)'
+  const textFaint = lm ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.35)'
+  const inputBg = lm ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.04)'
+  const inputBorder = lm ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.1)'
+  const headerBg = lm ? 'rgba(245,245,247,0.96)' : 'rgba(7,8,15,0.94)'
+  const headerBorder = lm ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.05)'
 
   async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -74,7 +90,7 @@ export default function SettingsClient({
         fetch('/api/profile', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, age, sex }),
+          body: JSON.stringify({ name, ...(age ? { age: parseInt(age) } : {}), ...(sex ? { sex } : {}) }),
         }),
         fetch('/api/preferences', {
           method: 'POST',
@@ -102,13 +118,13 @@ export default function SettingsClient({
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#07080F' }}>
+    <div style={{ minHeight: '100vh', background: bg, color: text }}>
 
       {/* Header */}
       <div style={{
         position: 'sticky', top: 0, zIndex: 100,
-        background: 'rgba(7,8,15,0.94)', backdropFilter: 'blur(20px)',
-        borderBottom: '1px solid rgba(255,255,255,0.05)',
+        background: headerBg, backdropFilter: 'blur(20px)',
+        borderBottom: `1px solid ${headerBorder}`,
       }}>
         <div style={{
           maxWidth: '480px', margin: '0 auto', padding: '14px 20px',
@@ -117,16 +133,16 @@ export default function SettingsClient({
           <button
             onClick={() => router.back()}
             style={{
-              background: 'rgba(255,255,255,0.06)', border: 'none', borderRadius: '8px',
+              background: lm ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.06)', border: 'none', borderRadius: '8px',
               width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              cursor: 'pointer', color: 'rgba(255,255,255,0.6)', flexShrink: 0,
+              cursor: 'pointer', color: textMuted, flexShrink: 0,
             }}
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
               <path d="M10 12L6 8l4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </button>
-          <h1 style={{ fontSize: '16px', fontWeight: 700, letterSpacing: '-0.3px' }}>Mi perfil</h1>
+          <h1 style={{ fontSize: '16px', fontWeight: 700, letterSpacing: '-0.3px', color: text }}>Mi perfil</h1>
         </div>
       </div>
 
@@ -139,7 +155,7 @@ export default function SettingsClient({
             onClick={() => photoInputRef.current?.click()}
             style={{
               width: '80px', height: '80px', borderRadius: '50%',
-              background: 'rgba(255,255,255,0.06)', border: '2px dashed rgba(180,79,255,0.4)',
+              background: lm ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.06)', border: '2px dashed rgba(180,79,255,0.4)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               cursor: 'pointer', overflow: 'hidden', padding: 0, position: 'relative',
             }}
@@ -148,7 +164,7 @@ export default function SettingsClient({
               // eslint-disable-next-line @next/next/no-img-element
               <img src={profilePhoto} alt="Perfil" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             ) : (
-              <span style={{ fontSize: '24px', fontWeight: 800, color: 'rgba(255,255,255,0.35)', letterSpacing: '-1px' }}>
+              <span style={{ fontSize: '24px', fontWeight: 800, color: textFaint, letterSpacing: '-1px' }}>
                 {(name || email).slice(0, 2).toUpperCase()}
               </span>
             )}
@@ -160,7 +176,7 @@ export default function SettingsClient({
               </div>
             )}
           </button>
-          <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.3)', margin: 0 }}>
+          <p style={{ fontSize: '12px', color: textFaint, margin: 0 }}>
             Toca para cambiar foto
           </p>
           <input ref={photoInputRef} type="file" accept="image/*" onChange={handlePhotoUpload} style={{ display: 'none' }} />
@@ -168,53 +184,58 @@ export default function SettingsClient({
 
         {/* Email — solo lectura */}
         <div style={{
-          background: '#0C0D16', border: '1px solid rgba(255,255,255,0.06)',
+          background: cardBg, border: `1px solid ${cardBorder}`,
           borderRadius: '14px', padding: '16px 18px', marginBottom: '24px',
         }}>
-          <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.28)', letterSpacing: '1px', textTransform: 'uppercase', fontWeight: 600, marginBottom: '4px' }}>
+          <p style={{ fontSize: '11px', color: textFaint, letterSpacing: '1px', textTransform: 'uppercase', fontWeight: 600, marginBottom: '4px' }}>
             Email
           </p>
-          <p style={{ fontSize: '15px', color: 'rgba(255,255,255,0.55)' }}>{email}</p>
+          <p style={{ fontSize: '15px', color: textMuted }}>{email}</p>
         </div>
 
         {/* Nombre */}
         <div style={{ marginBottom: '20px' }}>
-          <label style={{ fontSize: '12px', color: 'rgba(255,255,255,0.35)', fontWeight: 500, display: 'block', marginBottom: '8px' }}>
+          <label style={{ fontSize: '12px', color: textFaint, fontWeight: 500, display: 'block', marginBottom: '8px' }}>
             Nombre
           </label>
           <input
             type="text" placeholder="Tu nombre" value={name}
             onChange={e => setName(e.target.value)}
-            className="input-field" style={{ fontSize: '16px' }}
+            className="input-field" style={{ fontSize: '16px', background: inputBg, border: `1px solid ${inputBorder}`, color: text }}
           />
         </div>
 
         {/* Edad */}
         <div style={{ marginBottom: '20px' }}>
-          <label style={{ fontSize: '12px', color: 'rgba(255,255,255,0.35)', fontWeight: 500, display: 'block', marginBottom: '8px' }}>
+          <label style={{ fontSize: '12px', color: textFaint, fontWeight: 500, display: 'block', marginBottom: '8px' }}>
             Edad
           </label>
           <div className="input-with-unit" style={{ maxWidth: '140px' }}>
             <input
               type="number" placeholder="28" value={age}
               onChange={e => setAge(e.target.value)}
-              className="input-field" style={{ fontSize: '16px' }}
+              className="input-field" style={{ fontSize: '16px', background: inputBg, border: `1px solid ${inputBorder}`, color: text }}
               min="15" max="99"
             />
-            <span className="input-unit">años</span>
+            <span className="input-unit" style={{ color: textMuted }}>años</span>
           </div>
         </div>
 
         {/* Sexo */}
         <div style={{ marginBottom: '28px' }}>
-          <label style={{ fontSize: '12px', color: 'rgba(255,255,255,0.35)', fontWeight: 500, display: 'block', marginBottom: '8px' }}>
+          <label style={{ fontSize: '12px', color: textFaint, fontWeight: 500, display: 'block', marginBottom: '8px' }}>
             Sexo
           </label>
           <div style={{ display: 'flex', gap: '8px' }}>
             {['mujer', 'hombre'].map(s => (
               <button key={s} type="button" onClick={() => setSex(s)}
                 className={`toggle-btn ${sex === s ? 'active' : ''}`}
-                style={{ textTransform: 'capitalize' }}>
+                style={{
+                  textTransform: 'capitalize',
+                  border: `1px solid ${sex === s ? 'rgba(180,79,255,0.5)' : cardBorder}`,
+                  background: sex === s ? 'rgba(180,79,255,0.15)' : 'transparent',
+                  color: sex === s ? (lm ? '#8B2FD6' : 'white') : textMuted,
+                }}>
                 {s.charAt(0).toUpperCase() + s.slice(1)}
               </button>
             ))}
@@ -223,23 +244,23 @@ export default function SettingsClient({
 
         {/* Altura */}
         <div style={{ marginBottom: '20px' }}>
-          <label style={{ fontSize: '12px', color: 'rgba(255,255,255,0.35)', fontWeight: 500, display: 'block', marginBottom: '8px' }}>
+          <label style={{ fontSize: '12px', color: textFaint, fontWeight: 500, display: 'block', marginBottom: '8px' }}>
             Altura
           </label>
           <div className="input-with-unit" style={{ maxWidth: '140px' }}>
             <input
               type="number" placeholder="175" value={height}
               onChange={e => setHeight(e.target.value)}
-              className="input-field" style={{ fontSize: '16px' }}
+              className="input-field" style={{ fontSize: '16px', background: inputBg, border: `1px solid ${inputBorder}`, color: text }}
               min="100" max="250" step="0.1"
             />
-            <span className="input-unit">cm</span>
+            <span className="input-unit" style={{ color: textMuted }}>cm</span>
           </div>
         </div>
 
         {/* Nivel de actividad */}
         <div style={{ marginBottom: '28px' }}>
-          <label style={{ fontSize: '12px', color: 'rgba(255,255,255,0.35)', fontWeight: 500, display: 'block', marginBottom: '10px' }}>
+          <label style={{ fontSize: '12px', color: textFaint, fontWeight: 500, display: 'block', marginBottom: '10px' }}>
             Nivel de actividad
           </label>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -251,14 +272,14 @@ export default function SettingsClient({
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                   padding: '10px 14px', borderRadius: '10px', cursor: 'pointer',
                   fontSize: '14px', fontWeight: 500, fontFamily: 'inherit', textAlign: 'left' as const,
-                  background: activityLevel === opt.value ? 'rgba(180,79,255,0.12)' : 'rgba(255,255,255,0.04)',
-                  border: `1px solid ${activityLevel === opt.value ? 'rgba(180,79,255,0.4)' : 'rgba(255,255,255,0.07)'}`,
-                  color: activityLevel === opt.value ? '#B44FFF' : 'rgba(255,255,255,0.55)',
+                  background: activityLevel === opt.value ? 'rgba(180,79,255,0.12)' : inputBg,
+                  border: `1px solid ${activityLevel === opt.value ? 'rgba(180,79,255,0.4)' : inputBorder}`,
+                  color: activityLevel === opt.value ? '#B44FFF' : textMuted,
                   transition: 'all 0.15s ease',
                 }}
               >
                 <span>{opt.label}</span>
-                <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.28)', fontWeight: 400 }}>{opt.desc}</span>
+                <span style={{ fontSize: '12px', color: textFaint, fontWeight: 400 }}>{opt.desc}</span>
               </button>
             ))}
           </div>
@@ -266,7 +287,7 @@ export default function SettingsClient({
 
         {/* Preferencias de dieta */}
         <div style={{ marginBottom: '24px' }}>
-          <label style={{ fontSize: '12px', color: 'rgba(255,255,255,0.35)', fontWeight: 500, display: 'block', marginBottom: '8px' }}>
+          <label style={{ fontSize: '12px', color: textFaint, fontWeight: 500, display: 'block', marginBottom: '8px' }}>
             Preferencias / intolerancias alimentarias
           </label>
           <textarea
@@ -275,9 +296,9 @@ export default function SettingsClient({
             placeholder="Ej: intolerante a la lactosa, no como cerdo, alérgico a los frutos secos..."
             rows={3}
             style={{
-              width: '100%', background: 'rgba(255,255,255,0.04)',
-              border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px',
-              color: 'white', padding: '14px 16px', fontSize: '15px',
+              width: '100%', background: inputBg,
+              border: `1px solid ${inputBorder}`, borderRadius: '12px',
+              color: text, padding: '14px 16px', fontSize: '15px',
               fontFamily: 'inherit', resize: 'vertical', outline: 'none', lineHeight: 1.5,
             }}
           />
@@ -285,21 +306,21 @@ export default function SettingsClient({
 
         {/* Notificaciones */}
         <div style={{ marginBottom: '32px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.35)', fontWeight: 500, marginBottom: '4px', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+          <p style={{ fontSize: '12px', color: textFaint, fontWeight: 500, marginBottom: '4px', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
             Notificaciones
           </p>
 
           {/* Toggle email semanal */}
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)',
+            background: inputBg, border: `1px solid ${cardBorder}`,
             borderRadius: '12px', padding: '14px 16px',
           }}>
             <div>
-              <p style={{ fontSize: '14px', fontWeight: 500, color: 'rgba(255,255,255,0.75)', marginBottom: '2px' }}>
+              <p style={{ fontSize: '14px', fontWeight: 500, color: textMuted, marginBottom: '2px' }}>
                 Resumen semanal por email
               </p>
-              <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.3)' }}>
+              <p style={{ fontSize: '12px', color: textFaint }}>
                 Cada lunes recibes un resumen de tu semana
               </p>
             </div>
@@ -308,7 +329,7 @@ export default function SettingsClient({
               onClick={() => setWeeklyEmailEnabled(!weeklyEmailEnabled)}
               style={{
                 width: '44px', height: '24px', borderRadius: '12px', border: 'none',
-                background: weeklyEmailEnabled ? '#B44FFF' : 'rgba(255,255,255,0.12)',
+                background: weeklyEmailEnabled ? '#B44FFF' : lm ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.12)',
                 cursor: 'pointer', position: 'relative', flexShrink: 0,
                 transition: 'background 0.2s ease',
               }}
@@ -325,14 +346,14 @@ export default function SettingsClient({
           {/* Toggle recordatorio diario */}
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)',
+            background: inputBg, border: `1px solid ${cardBorder}`,
             borderRadius: '12px', padding: '14px 16px',
           }}>
             <div>
-              <p style={{ fontSize: '14px', fontWeight: 500, color: 'rgba(255,255,255,0.75)', marginBottom: '2px' }}>
+              <p style={{ fontSize: '14px', fontWeight: 500, color: textMuted, marginBottom: '2px' }}>
                 Recordatorio diario
               </p>
-              <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.3)' }}>
+              <p style={{ fontSize: '12px', color: textFaint }}>
                 Aviso en la app a partir de las 22:00 si no has registrado el día
               </p>
             </div>
@@ -341,7 +362,7 @@ export default function SettingsClient({
               onClick={() => setDailyReminderEnabled(!dailyReminderEnabled)}
               style={{
                 width: '44px', height: '24px', borderRadius: '12px', border: 'none',
-                background: dailyReminderEnabled ? '#B44FFF' : 'rgba(255,255,255,0.12)',
+                background: dailyReminderEnabled ? '#B44FFF' : lm ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.12)',
                 cursor: 'pointer', position: 'relative', flexShrink: 0,
                 transition: 'background 0.2s ease',
               }}
@@ -382,7 +403,7 @@ export default function SettingsClient({
             <p style={{ fontSize: '14px', fontWeight: 600, color: 'rgba(180,79,255,0.9)', marginBottom: '2px' }}>
               ✉️ Invitar a alguien especial
             </p>
-            <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.3)' }}>
+            <p style={{ fontSize: '12px', color: textFaint }}>
               Tienes 1 invitación disponible
             </p>
           </div>
@@ -394,11 +415,11 @@ export default function SettingsClient({
         {/* Disclaimer legal */}
         <div style={{
           marginTop: '40px', padding: '16px 18px',
-          background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)',
+          background: inputBg, border: `1px solid ${cardBorder}`,
           borderRadius: '12px',
         }}>
-          <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.2)', lineHeight: 1.7 }}>
-            <strong style={{ color: 'rgba(255,255,255,0.3)' }}>Aviso legal:</strong> Los planes generados por AngelAI son orientativos y se basan en inteligencia artificial. No sustituyen el consejo de un dietista-nutricionista o médico colegiado. Consulta a un profesional de la salud antes de realizar cambios significativos en tu dieta o entrenamiento.
+          <p style={{ fontSize: '11px', color: textFaint, lineHeight: 1.7 }}>
+            <strong style={{ color: textMuted }}>Aviso legal:</strong> Los planes generados por AngelAI son orientativos y se basan en inteligencia artificial. No sustituyen el consejo de un dietista-nutricionista o médico colegiado. Consulta a un profesional de la salud antes de realizar cambios significativos en tu dieta o entrenamiento.
           </p>
         </div>
       </form>
