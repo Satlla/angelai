@@ -339,6 +339,16 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
     e.target.value = ''
   }
 
+  function shareJarvisMessage(content: string) {
+    const text = content.replace(/\*\*(.*?)\*\*/g, '$1').replace(/\*(.*?)\*/g, '$1').replace(/_\((.*?)\)_/g, '$1')
+    const shareText = `Dr. Jarvis (AngelAI) me dice:\n\n"${text}"\n\n💪 angelai.app`
+    if (navigator.share) {
+      navigator.share({ text: shareText }).catch(() => {})
+    } else {
+      navigator.clipboard.writeText(shareText).then(() => alert('¡Copiado! Pégalo donde quieras 😄'))
+    }
+  }
+
   async function sendCoachMessage() {
     if (!coachInput.trim() || coachLoading) return
     const userMsg = coachInput.trim()
@@ -1915,7 +1925,7 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
                 </div>
               )}
               {coachMessages.map((msg, i) => (
-                <div key={i} style={{ display: 'flex', justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
+                <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
                   <div style={{
                     maxWidth: '88%', padding: '11px 14px',
                     borderRadius: msg.role === 'user' ? '14px 14px 4px 14px' : '14px 14px 14px 4px',
@@ -1923,10 +1933,21 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
                     border: `1px solid ${msg.role === 'user' ? 'rgba(180,79,255,0.3)' : 'rgba(255,255,255,0.08)'}`,
                     fontSize: '14px', lineHeight: 1.6,
                     color: msg.role === 'user' ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.75)',
-                    whiteSpace: 'pre-wrap',
                   }}>
-                    {msg.content}
+                    {msg.role === 'assistant'
+                      ? <span dangerouslySetInnerHTML={{ __html: msg.content
+                          .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                          .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                          .replace(/_\((.*?)\)_/g, '<em>$1</em>')
+                          .replace(/\n/g, '<br/>') }} />
+                      : msg.content}
                   </div>
+                  {msg.role === 'assistant' && (
+                    <button onClick={() => shareJarvisMessage(msg.content)} style={{ marginTop: '4px', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.25)', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '4px', padding: '2px 4px', fontFamily: 'inherit' }}>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                      Compartir
+                    </button>
+                  )}
                 </div>
               ))}
               {coachLoading && (
@@ -2103,7 +2124,7 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
                 </div>
               )}
               {coachMessages.map((msg, i) => (
-                <div key={i} style={{ display: 'flex', justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
+                <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
                   <div style={{
                     maxWidth: '88%', padding: '11px 14px',
                     borderRadius: msg.role === 'user' ? '14px 14px 4px 14px' : '14px 14px 14px 4px',
@@ -2116,10 +2137,16 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
                       ? <span dangerouslySetInnerHTML={{ __html: msg.content
                           .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
                           .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                          .replace(/_\((.*?)\)_/g, '<em>$1</em>')
                           .replace(/\n/g, '<br/>') }} />
-                      : msg.content
-                    }
+                      : msg.content}
                   </div>
+                  {msg.role === 'assistant' && (
+                    <button onClick={() => shareJarvisMessage(msg.content)} style={{ marginTop: '4px', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.25)', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '4px', padding: '2px 4px', fontFamily: 'inherit' }}>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                      Compartir
+                    </button>
+                  )}
                 </div>
               ))}
               {coachLoading && (
