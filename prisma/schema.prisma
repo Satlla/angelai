@@ -8,20 +8,50 @@ datasource db {
 }
 
 model User {
-  id              String           @id @default(cuid())
-  email           String           @unique
-  name            String?
-  createdAt       DateTime         @default(now())
-  age             Int?
-  sex             String?
-  currentMedal    String?
-  medalUpdatedAt  DateTime?
-  profilePhotoUrl String?
-  checkIns        CheckIn[]
-  dailyLogs       DailyLog[]
-  badges          UserBadge[]
-  preferences     UserPreferences?
-  coachMessages   CoachMessage[]
+  id                String             @id @default(cuid())
+  email             String             @unique
+  name              String?
+  createdAt         DateTime           @default(now())
+  age               Int?
+  sex               String?
+  currentMedal      String?
+  medalUpdatedAt    DateTime?
+  profilePhotoUrl   String?
+  checkIns          CheckIn[]
+  dailyLogs         DailyLog[]
+  badges            UserBadge[]
+  preferences       UserPreferences?
+  coachMessages     CoachMessage[]
+  foodEntries       FoodEntry[]
+  pushSubscriptions PushSubscription[]
+}
+
+model FoodEntry {
+  id        String   @id @default(cuid())
+  userId    String
+  date      DateTime
+  name      String
+  calories  Int
+  protein   Float
+  carbs     Float
+  fat       Float
+  meal      String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([userId, date])
+}
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
 }
 
 model CoachMessage {

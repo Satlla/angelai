@@ -17,6 +17,10 @@ const ProgressChart3D = dynamic(() => import('@/components/ProgressChart3D'), {
   loading: () => <div style={{ height: '280px', borderRadius: '16px', background: '#070810' }} />,
 })
 
+const MacrosTracker = dynamic(() => import('@/components/MacrosTracker'), { ssr: false })
+const FoodAnalyzer = dynamic(() => import('@/components/FoodAnalyzer'), { ssr: false })
+const RecipesPanel = dynamic(() => import('@/components/RecipesPanel'), { ssr: false })
+
 const BADGE_INFO: Record<string, { label: string }> = {
   primer_paso:    { label: 'Primer paso' },
   sin_rendirse:   { label: 'Sin rendirse' },
@@ -36,9 +40,10 @@ type CheckIn = {
   goal: string; waist?: number | null; hips?: number | null;
   chest?: number | null; arms?: number | null;
   customizationUsed?: boolean;
+  frontPhotoUrl?: string | null; sidePhotoUrl?: string | null;
 }
 
-type Tab = 'overview' | 'diet' | 'shopping' | 'progress' | 'training' | 'history' | 'coach'
+type Tab = 'overview' | 'diet' | 'shopping' | 'progress' | 'training' | 'history' | 'coach' | 'macros' | 'recipes'
 
 type DailyLogEntry = { date: string; disciplineScore: number | null; trainedToday: boolean }
 
@@ -1088,6 +1093,38 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
           </div>
         )}
 
+        {/* Leaderboard + Share row */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
+          {/* Leaderboard link */}
+          <div
+            onClick={() => router.push('/leaderboard')}
+            style={{ background: lightMode ? 'white' : '#0C0D16', border: `1px solid ${lightMode ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.06)'}`, borderRadius: '16px', padding: '16px', cursor: 'pointer', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '80px' }}
+          >
+            <span style={{ fontSize: '22px' }}>🏆</span>
+            <div>
+              <div style={{ fontSize: '12px', fontWeight: 600, color: lightMode ? '#1a1a2e' : 'white' }}>Ranking</div>
+              <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.3)', marginTop: '2px' }}>Ver top semanal</div>
+            </div>
+          </div>
+
+          {/* Share progress card */}
+          <div
+            onClick={() => {
+              const streak = calcStreak(initialDailyLogs)
+              const text = `🏋️ Mi progreso en AngelAI:\n\n📊 Body Score: ${latest.bodyScore || '—'} (${latest.rank || '—'})\n⚖️ Peso: ${latest.weight}kg\n🔥 Racha: ${streak} días\n\nConsigue tu plan personalizado en angelai.app`
+              if (navigator.share) navigator.share({ text }).catch(() => {})
+              else navigator.clipboard.writeText(text).then(() => alert('¡Copiado!'))
+            }}
+            style={{ background: lightMode ? 'white' : '#0C0D16', border: `1px solid ${lightMode ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.06)'}`, borderRadius: '16px', padding: '16px', cursor: 'pointer', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '80px' }}
+          >
+            <span style={{ fontSize: '22px' }}>📤</span>
+            <div>
+              <div style={{ fontSize: '12px', fontWeight: 600, color: lightMode ? '#1a1a2e' : 'white' }}>Compartir</div>
+              <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.3)', marginTop: '2px' }}>Mi progreso</div>
+            </div>
+          </div>
+        </div>
+
         <div className="separator" style={{ marginBottom: '24px' }} />
 
         </>)}
@@ -1881,6 +1918,29 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
         })()}
 
         {/* ── TAB: HISTORY ── */}
+        {/* ── TAB: MACROS ── */}
+        {activeTab === 'macros' && dietData && (
+          <div style={{ paddingTop: '24px', paddingBottom: '100px' }}>
+            <h2 style={{ fontSize: '20px', fontWeight: 700, letterSpacing: '-0.5px', marginBottom: '16px', color: 'white' }}>Mis macros hoy</h2>
+            <MacrosTracker targets={{ calories: dietData.calories, protein: dietData.protein, carbs: dietData.carbs, fat: dietData.fat }} />
+          </div>
+        )}
+        {activeTab === 'macros' && !dietData && (
+          <div style={{ paddingTop: '60px', textAlign: 'center', color: 'rgba(255,255,255,0.35)', fontSize: '14px' }}>
+            Necesitas tener un plan activo para usar el tracker de macros.
+          </div>
+        )}
+
+        {/* ── TAB: RECIPES ── */}
+        {activeTab === 'recipes' && (
+          <div style={{ paddingTop: '24px', paddingBottom: '100px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <h2 style={{ fontSize: '20px', fontWeight: 700, letterSpacing: '-0.5px', color: 'white' }}>Recetas & Análisis</h2>
+            <FoodAnalyzer />
+            <RecipesPanel />
+          </div>
+        )}
+
+        {/* ── TAB: HISTORY ── */}
         {activeTab === 'history' && (
           <div style={{ paddingTop: '24px', paddingBottom: '24px' }}>
             <h2 style={{ fontSize: '20px', fontWeight: 700, letterSpacing: '-0.5px', marginBottom: '16px', color: lightMode ? '#1a1a2e' : 'white' }}>
@@ -1998,13 +2058,16 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
 
       {/* Bottom Tab Bar */}
       <div className="tab-bar">
-        <div style={{ maxWidth: '480px', margin: '0 auto', display: 'flex', padding: '0 2px' }}>
+        <div style={{ maxWidth: '480px', margin: '0 auto', display: 'flex', overflowX: 'auto', scrollbarWidth: 'none', padding: '0 2px' }}>
           {([
             { key: 'overview',  label: 'Resumen',  icon: OverviewIcon },
             { key: 'diet',      label: 'Dieta',    icon: DietIcon },
+            { key: 'macros',    label: 'Macros',   icon: () => <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7" stroke="currentColor" strokeWidth="1.4"/><path d="M10 6v4l3 2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg> },
+            { key: 'recipes',   label: 'Recetas',  icon: () => <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M6 3v14M6 10h8M14 3v14" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg> },
             { key: 'shopping',  label: 'Compra',   icon: ShoppingIcon },
             { key: 'progress',  label: 'Progreso', icon: ChartIcon },
             { key: 'training',  label: 'Entreno',  icon: TrainingIcon },
+            { key: 'history',   label: 'Historial', icon: () => <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M4 6h12M4 10h8M4 14h6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg> },
           ] as { key: Tab; label: string; icon: () => React.JSX.Element }[]).map(tab => {
             const isActive = activeTab === tab.key
             return (
@@ -2012,14 +2075,14 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
                 style={{
-                  flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
-                  padding: '12px 4px', background: 'none', border: 'none', cursor: 'pointer',
+                  flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
+                  padding: '12px 14px', background: 'none', border: 'none', cursor: 'pointer',
                   color: isActive ? '#B44FFF' : 'rgba(255,255,255,0.28)',
                   fontFamily: 'inherit', transition: 'color 0.15s ease',
                 }}
               >
                 <tab.icon />
-                <span style={{ fontSize: '8px', fontWeight: isActive ? 600 : 400, letterSpacing: '0.2px' }}>
+                <span style={{ fontSize: '8px', fontWeight: isActive ? 600 : 400, letterSpacing: '0.2px', whiteSpace: 'nowrap' }}>
                   {tab.label}
                 </span>
               </button>
@@ -2259,6 +2322,27 @@ function HistoryCard({ checkIn, plan, prev, isLatest, lightMode }: {
       {/* Expanded details */}
       {open && plan && (
         <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+
+          {/* Photos comparison */}
+          {(checkIn.frontPhotoUrl || checkIn.sidePhotoUrl) && (
+            <div>
+              <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600, marginBottom: '10px' }}>Fotos</p>
+              <div style={{ display: 'grid', gridTemplateColumns: checkIn.frontPhotoUrl && checkIn.sidePhotoUrl ? '1fr 1fr' : '1fr', gap: '8px' }}>
+                {checkIn.frontPhotoUrl && (
+                  <div>
+                    <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.25)', marginBottom: '4px', textAlign: 'center' }}>Frontal</div>
+                    <img src={checkIn.frontPhotoUrl} alt="Frontal" style={{ width: '100%', borderRadius: '10px', objectFit: 'cover', aspectRatio: '3/4' }} />
+                  </div>
+                )}
+                {checkIn.sidePhotoUrl && (
+                  <div>
+                    <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.25)', marginBottom: '4px', textAlign: 'center' }}>Lateral</div>
+                    <img src={checkIn.sidePhotoUrl} alt="Lateral" style={{ width: '100%', borderRadius: '10px', objectFit: 'cover', aspectRatio: '3/4' }} />
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Macros */}
           <div>

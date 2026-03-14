@@ -21,6 +21,7 @@ export default async function Dashboard() {
         id: true, createdAt: true, weight: true, bodyScore: true, rank: true,
         analysis: true, dietPlan: true, goal: true, waist: true, hips: true,
         chest: true, arms: true, customizationUsed: true,
+        frontPhotoUrl: true, sidePhotoUrl: true,
       },
     }),
     prisma.userBadge.findMany({ where: { userId: user.id } }),
@@ -54,6 +55,8 @@ export default async function Dashboard() {
         chest: c.chest,
         arms: c.arms,
         customizationUsed: c.customizationUsed,
+        frontPhotoUrl: c.frontPhotoUrl,
+        sidePhotoUrl: c.sidePhotoUrl,
       }))}
       badges={badges.map((b: typeof badges[0]) => ({ badge: b.badge, earnedAt: b.earnedAt.toISOString() }))}
       daysLeft={daysLeft}

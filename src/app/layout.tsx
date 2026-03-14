@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import './globals.css'
+import ServiceWorkerRegister from '@/components/ServiceWorkerRegister'
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://dieta.itineramio.com'
 
@@ -55,7 +56,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="theme-color" content="#B44FFF" />
         <link rel="manifest" href="/manifest.json" />
       </head>
-      <body>{children}</body>
+      <body>
+        <ServiceWorkerRegister />
+        {children}
+      </body>
     </html>
   )
 }
