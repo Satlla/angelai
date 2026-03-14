@@ -26,7 +26,7 @@ export default async function Dashboard() {
     }),
     prisma.userBadge.findMany({ where: { userId: user.id } }),
     prisma.userPreferences.findUnique({ where: { userId: user.id } }),
-    prisma.dailyLog.findFirst({ where: { userId: user.id, date: { gte: new Date(new Date().setHours(0,0,0,0)) } } }),
+    prisma.dailyLog.findFirst({ where: { userId: user.id, date: { gte: (() => { const now = new Date(); const p = new Intl.DateTimeFormat('es-ES', { timeZone: 'Europe/Madrid', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(now); const sp = Object.fromEntries(p.filter(x => x.type !== 'literal').map(x => [x.type, parseInt(x.value)])); return new Date(Date.UTC(sp.year, sp.month - 1, sp.day)) })() } } }),
     prisma.dailyLog.findMany({ where: { userId: user.id }, orderBy: { date: 'desc' }, take: 60, select: { date: true, disciplineScore: true, trainedToday: true } }),
   ])
 

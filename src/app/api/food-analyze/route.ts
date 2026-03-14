@@ -10,7 +10,10 @@ export async function POST(req: NextRequest) {
   if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
   const body = await req.json()
-  const { imageBase64, mimeType = 'image/jpeg' } = body
+  const { imageBase64 } = body
+  const ALLOWED_MIME = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'] as const
+  type AllowedMime = typeof ALLOWED_MIME[number]
+  const mimeType: AllowedMime = ALLOWED_MIME.includes(body.mimeType) ? body.mimeType : 'image/jpeg'
 
   if (!imageBase64) return NextResponse.json({ error: 'Imagen requerida' }, { status: 400 })
 

@@ -55,7 +55,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Ya usaste tu ajuste para este ciclo. El próximo check-in te dará uno nuevo.', limitReached: true }, { status: 403 })
   }
 
-  const currentPlan = JSON.parse(checkIn.dietPlan)
+  let currentPlan: Record<string, unknown>
+  try {
+    currentPlan = JSON.parse(checkIn.dietPlan)
+  } catch {
+    return NextResponse.json({ error: 'Plan corrupto, haz un nuevo check-in.' }, { status: 500 })
+  }
   const macros = {
     calories: currentPlan.calories,
     protein: currentPlan.protein,
