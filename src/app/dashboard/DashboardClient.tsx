@@ -1921,7 +1921,10 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
         {/* ── TAB: MACROS ── */}
         {activeTab === 'macros' && dietData && (
           <div style={{ paddingTop: '24px', paddingBottom: '100px' }}>
-            <h2 style={{ fontSize: '20px', fontWeight: 700, letterSpacing: '-0.5px', marginBottom: '16px', color: 'white' }}>Mis macros hoy</h2>
+            <h2 style={{ fontSize: '20px', fontWeight: 700, letterSpacing: '-0.5px', color: 'white' }}>Mis macros hoy</h2>
+            <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.35)', marginTop: '4px', marginBottom: '16px' }}>
+              Registra lo que comes y ve si llegas a tus objetivos diarios
+            </p>
             <MacrosTracker targets={{ calories: dietData.calories, protein: dietData.protein, carbs: dietData.carbs, fat: dietData.fat }} />
           </div>
         )}

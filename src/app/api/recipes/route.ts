@@ -70,7 +70,8 @@ Usa ingredientes comunes en España. Las recetas deben ser realistas, sabrosas y
   const text = response.content[0].type === 'text' ? response.content[0].text : ''
 
   try {
-    const jsonMatch = text.match(/\{[\s\S]*\}/)
+    const cleaned = text.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim()
+    const jsonMatch = cleaned.match(/\{[\s\S]*\}/)
     const result = jsonMatch ? JSON.parse(jsonMatch[0]) : { recipes: [] }
     return NextResponse.json(result)
   } catch {
