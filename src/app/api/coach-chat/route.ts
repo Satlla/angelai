@@ -62,7 +62,7 @@ Responde en español. Sé conciso (máximo 150 palabras). Usa **negritas** solo 
   ]
 
   const response = await client.messages.create({
-    model: 'claude-sonnet-4-6',
+    model: 'claude-haiku-4-5-20251001',
     max_tokens: 400,
     system: systemPrompt,
     messages,
