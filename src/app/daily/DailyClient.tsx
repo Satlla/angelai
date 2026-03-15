@@ -26,7 +26,7 @@ const QUESTIONS = [
   },
   {
     key: 'trainedToday',
-    type: 'bool',
+    type: 'training',
     label: '¿Has entrenado hoy?',
     emoji: '💪',
     color: '#00D9F5',
@@ -57,6 +57,8 @@ export default function DailyClient() {
     sleptWell: true,
     waterGlasses: 6,
   })
+  const [isCheatDay, setIsCheatDay] = useState(false)
+  const [isRestDay, setIsRestDay] = useState(false)
   const [notes, setNotes] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [done, setDone] = useState(false)
@@ -73,15 +75,15 @@ export default function DailyClient() {
       const res = await fetch('/api/daily-log', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...answers, waterOk, waterGlasses: glasses, notes }),
+        body: JSON.stringify({ ...answers, waterOk, waterGlasses: glasses, notes, isCheatDay, isRestDay }),
       })
       if (res.ok) {
-        const d = answers.dietScore as number
-        const t = answers.trainedToday ? 20 : 0
+        const effectiveDiet = isCheatDay ? Math.max(answers.dietScore as number, 70) : answers.dietScore as number
+        const trainingPoints = isRestDay ? 20 : (answers.trainedToday ? 20 : 0)
         const s = answers.sleptWell ? 15 : 0
         const w = glasses >= 6 ? 10 : glasses >= 4 ? 7 : glasses >= 2 ? 3 : 0
         const st = Math.max(0, (5 - (answers.stressLevel as number)) * 3)
-        const calculated = Math.min(100, Math.round(d * 0.55 + t + s + w + st))
+        const calculated = Math.min(100, Math.round(effectiveDiet * 0.55 + trainingPoints + s + w + st))
         setScore(calculated)
         setDone(true)
       }
@@ -102,6 +104,9 @@ export default function DailyClient() {
       : score >= 50
       ? 'Día regular. Mañana lo recuperas.'
       : 'Hoy fue difícil. No te rindas.'
+
+    const trainingLabel = isRestDay ? 'Descanso ✓' : answers.trainedToday ? 'Sí ✓' : 'No ✗'
+    const trainingColor = isRestDay ? '#00D9F5' : answers.trainedToday ? '#00D9F5' : 'rgba(255,255,255,0.25)'
 
     return (
       <div style={{ minHeight: '100vh', background: '#07080F', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 24px' }}>
@@ -129,14 +134,21 @@ export default function DailyClient() {
             </div>
           </div>
 
+          {(isCheatDay || isRestDay) && (
+            <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', marginBottom: '16px' }}>
+              {isCheatDay && <span style={{ fontSize: '11px', padding: '4px 10px', borderRadius: '20px', background: 'rgba(255,184,0,0.1)', border: '1px solid rgba(255,184,0,0.3)', color: '#FFB800', fontWeight: 600 }}>🍕 Día trampa</span>}
+              {isRestDay && <span style={{ fontSize: '11px', padding: '4px 10px', borderRadius: '20px', background: 'rgba(0,217,245,0.1)', border: '1px solid rgba(0,217,245,0.3)', color: '#00D9F5', fontWeight: 600 }}>😴 Día de descanso</span>}
+            </div>
+          )}
+
           <div style={{ fontSize: '13px', fontWeight: 700, color, letterSpacing: '2px', marginBottom: '12px' }}>{level}</div>
           <h2 style={{ fontSize: '22px', fontWeight: 800, letterSpacing: '-0.5px', marginBottom: '12px' }}>{message}</h2>
 
           {/* Resumen */}
           <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '16px', padding: '20px', marginBottom: '32px', textAlign: 'left' }}>
             {[
-              { label: 'Dieta', value: `${answers.dietScore}%`, color: '#B44FFF' },
-              { label: 'Entrenamiento', value: answers.trainedToday ? 'Sí ✓' : 'No ✗', color: answers.trainedToday ? '#00D9F5' : 'rgba(255,255,255,0.25)' },
+              { label: 'Dieta', value: `${answers.dietScore}%${isCheatDay ? ' 🍕' : ''}`, color: '#B44FFF' },
+              { label: 'Entrenamiento', value: trainingLabel, color: trainingColor },
               { label: 'Sueño', value: answers.sleptWell ? 'Bien ✓' : 'Mal ✗', color: answers.sleptWell ? '#00D9F5' : 'rgba(255,255,255,0.25)' },
               { label: 'Agua', value: `${answers.waterGlasses} vasos ${(answers.waterGlasses as number) >= 6 ? '✓' : '✗'}`, color: (answers.waterGlasses as number) >= 6 ? '#00D9F5' : 'rgba(255,255,255,0.25)' },
               { label: 'Estrés', value: `${answers.stressLevel}/5`, color: (answers.stressLevel as number) <= 2 ? '#00D9F5' : '#FFB800' },
@@ -210,7 +222,6 @@ export default function DailyClient() {
                 </div>
 
                 <div style={{ position: 'relative', height: '52px', display: 'flex', alignItems: 'center' }}>
-                  {/* Track */}
                   <div style={{ position: 'absolute', left: 0, right: 0, height: '6px', background: 'rgba(255,255,255,0.06)', borderRadius: '3px', overflow: 'hidden' }}>
                     <div style={{
                       height: '100%',
@@ -226,12 +237,8 @@ export default function DailyClient() {
                     max={q.max}
                     value={answers[q.key] as number}
                     onChange={e => setAnswers(prev => ({ ...prev, [q.key]: Number(e.target.value) }))}
-                    style={{
-                      position: 'absolute', left: 0, right: 0, width: '100%',
-                      opacity: 0, height: '52px', cursor: 'pointer',
-                    }}
+                    style={{ position: 'absolute', left: 0, right: 0, width: '100%', opacity: 0, height: '52px', cursor: 'pointer' }}
                   />
-                  {/* Thumb visual */}
                   <div style={{
                     position: 'absolute',
                     left: `calc(${((answers[q.key] as number) - (q.min ?? 0)) / ((q.max ?? 100) - (q.min ?? 0)) * 100}% - 14px)`,
@@ -245,12 +252,112 @@ export default function DailyClient() {
                 </div>
 
                 {q.key === 'dietScore' && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px' }}>
-                    {[0, 25, 50, 75, 100].map(v => (
-                      <span key={v} style={{ fontSize: '11px', color: 'rgba(255,255,255,0.2)' }}>{v}%</span>
-                    ))}
-                  </div>
+                  <>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px', marginBottom: '20px' }}>
+                      {[0, 25, 50, 75, 100].map(v => (
+                        <span key={v} style={{ fontSize: '11px', color: 'rgba(255,255,255,0.2)' }}>{v}%</span>
+                      ))}
+                    </div>
+                    {/* Día trampa toggle */}
+                    <button
+                      onClick={() => setIsCheatDay(v => !v)}
+                      style={{
+                        width: '100%', padding: '14px 18px',
+                        background: isCheatDay ? 'rgba(255,184,0,0.12)' : 'rgba(255,255,255,0.03)',
+                        border: `1.5px solid ${isCheatDay ? 'rgba(255,184,0,0.5)' : 'rgba(255,255,255,0.08)'}`,
+                        borderRadius: '14px', cursor: 'pointer', fontFamily: 'inherit',
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        transition: 'all 0.2s ease',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <span style={{ fontSize: '22px' }}>🍕</span>
+                        <div style={{ textAlign: 'left' }}>
+                          <div style={{ fontSize: '14px', fontWeight: 600, color: isCheatDay ? '#FFB800' : 'rgba(255,255,255,0.6)' }}>Hoy es mi día trampa</div>
+                          <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.25)', marginTop: '2px' }}>La trampa no penaliza tu puntuación</div>
+                        </div>
+                      </div>
+                      <div style={{
+                        width: '40px', height: '24px', borderRadius: '12px',
+                        background: isCheatDay ? '#FFB800' : 'rgba(255,255,255,0.1)',
+                        position: 'relative', transition: 'background 0.2s ease', flexShrink: 0,
+                      }}>
+                        <div style={{
+                          width: '18px', height: '18px', borderRadius: '50%', background: 'white',
+                          position: 'absolute', top: '3px',
+                          left: isCheatDay ? '19px' : '3px',
+                          transition: 'left 0.2s ease',
+                          boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
+                        }} />
+                      </div>
+                    </button>
+                  </>
                 )}
+              </div>
+            )}
+
+            {q.type === 'training' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {/* Sí */}
+                <button
+                  onClick={() => { setAnswers(prev => ({ ...prev, trainedToday: true })); setIsRestDay(false) }}
+                  style={{
+                    padding: '20px',
+                    borderRadius: '16px',
+                    border: answers.trainedToday && !isRestDay ? `2px solid ${q.color}` : '2px solid rgba(255,255,255,0.06)',
+                    background: answers.trainedToday && !isRestDay ? `${q.color}18` : 'rgba(255,255,255,0.02)',
+                    color: answers.trainedToday && !isRestDay ? 'white' : 'rgba(255,255,255,0.45)',
+                    cursor: 'pointer', fontFamily: 'inherit',
+                    display: 'flex', alignItems: 'center', gap: '14px',
+                    transition: 'all 0.18s ease',
+                  }}
+                >
+                  <span style={{ fontSize: '28px' }}>✓</span>
+                  <div style={{ textAlign: 'left' }}>
+                    <div style={{ fontSize: '15px', fontWeight: 700 }}>Sí, he entrenado</div>
+                  </div>
+                </button>
+
+                {/* No */}
+                <button
+                  onClick={() => { setAnswers(prev => ({ ...prev, trainedToday: false })); setIsRestDay(false) }}
+                  style={{
+                    padding: '20px',
+                    borderRadius: '16px',
+                    border: !answers.trainedToday && !isRestDay ? '2px solid rgba(255,107,107,0.5)' : '2px solid rgba(255,255,255,0.06)',
+                    background: !answers.trainedToday && !isRestDay ? 'rgba(255,107,107,0.08)' : 'rgba(255,255,255,0.02)',
+                    color: !answers.trainedToday && !isRestDay ? 'white' : 'rgba(255,255,255,0.45)',
+                    cursor: 'pointer', fontFamily: 'inherit',
+                    display: 'flex', alignItems: 'center', gap: '14px',
+                    transition: 'all 0.18s ease',
+                  }}
+                >
+                  <span style={{ fontSize: '28px' }}>✗</span>
+                  <div style={{ textAlign: 'left' }}>
+                    <div style={{ fontSize: '15px', fontWeight: 700 }}>No he entrenado</div>
+                  </div>
+                </button>
+
+                {/* Día de descanso */}
+                <button
+                  onClick={() => { setIsRestDay(true); setAnswers(prev => ({ ...prev, trainedToday: false })) }}
+                  style={{
+                    padding: '20px',
+                    borderRadius: '16px',
+                    border: isRestDay ? `2px solid ${q.color}` : '2px solid rgba(255,255,255,0.06)',
+                    background: isRestDay ? `${q.color}18` : 'rgba(255,255,255,0.02)',
+                    color: isRestDay ? 'white' : 'rgba(255,255,255,0.45)',
+                    cursor: 'pointer', fontFamily: 'inherit',
+                    display: 'flex', alignItems: 'center', gap: '14px',
+                    transition: 'all 0.18s ease',
+                  }}
+                >
+                  <span style={{ fontSize: '28px' }}>📅</span>
+                  <div style={{ textAlign: 'left' }}>
+                    <div style={{ fontSize: '15px', fontWeight: 700 }}>No es mi día de entreno</div>
+                    <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.3)', marginTop: '2px' }}>Descanso planificado — no penaliza</div>
+                  </div>
+                </button>
               </div>
             )}
 
@@ -266,14 +373,9 @@ export default function DailyClient() {
                       border: answers[q.key] === val ? `2px solid ${q.color}` : '2px solid rgba(255,255,255,0.06)',
                       background: answers[q.key] === val ? `${q.color}18` : 'rgba(255,255,255,0.02)',
                       color: answers[q.key] === val ? 'white' : 'rgba(255,255,255,0.45)',
-                      fontSize: '28px',
-                      fontWeight: 700,
-                      cursor: 'pointer',
+                      fontSize: '28px', fontWeight: 700, cursor: 'pointer',
                       transition: 'all 0.18s ease',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      gap: '10px',
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px',
                     }}
                   >
                     <span style={{ fontSize: '36px' }}>{val ? '✓' : '✗'}</span>

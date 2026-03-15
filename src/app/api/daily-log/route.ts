@@ -12,6 +12,8 @@ const DailyLogSchema = z.object({
   waterGlasses: z.number().int().min(0).max(12).optional(),
   stressLevel: z.number().int().min(1).max(5),
   notes: z.string().max(500).optional(),
+  isCheatDay: z.boolean().optional().default(false),
+  isRestDay: z.boolean().optional().default(false),
 })
 
 export async function POST(req: NextRequest) {
@@ -23,12 +25,16 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) {
     return NextResponse.json({ error: 'Datos inválidos', details: parsed.error.flatten().fieldErrors }, { status: 400 })
   }
-  const { dietScore, trainedToday, sleptWell, waterOk, waterGlasses, stressLevel, notes } = parsed.data
+  const { dietScore, trainedToday, sleptWell, waterOk, waterGlasses, stressLevel, notes, isCheatDay, isRestDay } = parsed.data
 
   // Calcular disciplineScore (0-100)
+  // Día trampa: la dieta cuenta como mínimo 70 (no se penaliza por la trampa planificada)
+  // Día de descanso: el entreno cuenta como hecho (es parte del plan)
+  const effectiveDietScore = isCheatDay ? Math.max(dietScore, 70) : dietScore
+  const trainingPoints = isRestDay ? 25 : (trainedToday ? 25 : 0)
   const disciplineScore = Math.round(
-    (dietScore / 100) * 40 +
-    (trainedToday ? 25 : 0) +
+    (effectiveDietScore / 100) * 40 +
+    trainingPoints +
     (sleptWell ? 20 : 0) +
     (waterOk ? 10 : 0) +
     ((6 - stressLevel) / 5) * 5
@@ -45,7 +51,7 @@ export async function POST(req: NextRequest) {
 
   const log = await prisma.dailyLog.upsert({
     where: { userId_date: { userId: user.id, date: todayDate } },
-    update: { dietScore, trainedToday, sleptWell, waterOk, waterGlasses, stressLevel, notes, disciplineScore },
+    update: { dietScore, trainedToday, sleptWell, waterOk, waterGlasses, stressLevel, notes, disciplineScore, isCheatDay: !!isCheatDay, isRestDay: !!isRestDay },
     create: {
       userId: user.id,
       date: todayDate,
@@ -57,6 +63,8 @@ export async function POST(req: NextRequest) {
       stressLevel: stressLevel ?? 3,
       notes,
       disciplineScore,
+      isCheatDay: !!isCheatDay,
+      isRestDay: !!isRestDay,
     },
   })
 

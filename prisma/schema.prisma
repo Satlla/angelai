@@ -155,6 +155,8 @@ model DailyLog {
   stressLevel     Int
   notes           String?
   disciplineScore Int?
+  isCheatDay      Boolean  @default(false)
+  isRestDay       Boolean  @default(false)
   user            User     @relation(fields: [userId], references: [id])
 
   @@unique([userId, date])
