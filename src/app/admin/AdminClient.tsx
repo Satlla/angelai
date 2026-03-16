@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 // ── Event labels ───────────────────────────────────────────────────────────
 const EVENT_META: Record<string, { label: string; icon: string; color: string }> = {
@@ -498,6 +498,8 @@ export default function AdminClient({ users, analytics, recentEvents, invites }:
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteStatus, setInviteStatus] = useState<'idle' | 'loading' | 'ok' | 'error'>('idle')
   const [inviteError, setInviteError] = useState('')
+  const [chartWidth, setChartWidth] = useState(600)
+  useEffect(() => { setChartWidth(Math.min(800, window.innerWidth - 80)) }, [])
 
   async function sendAdminInvite() {
     if (!inviteEmail.trim()) return
@@ -630,7 +632,7 @@ export default function AdminClient({ users, analytics, recentEvents, invites }:
             {/* Registration chart */}
             <div style={{ background: '#0C0D16', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '16px', padding: '20px' }}>
               <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '14px' }}>Registros últimos 30 días</div>
-              <BarChart data={regByDay} color="#B44FFF" width={Math.min(800, typeof window !== 'undefined' ? window.innerWidth - 80 : 600)} height={60} />
+              <BarChart data={regByDay} color="#B44FFF" width={chartWidth} height={60} />
             </div>
 
             {/* Activity feed + analytics side by side */}
@@ -771,7 +773,7 @@ export default function AdminClient({ users, analytics, recentEvents, invites }:
                             <td style={{ padding: '11px 16px' }}>
                               {!inv.usedAt && (
                                 <button
-                                  onClick={() => navigator.clipboard.writeText(`${typeof window !== 'undefined' ? window.location.origin : ''}/invite?token=${inv.token}`)}
+                                  onClick={() => navigator.clipboard.writeText(`${window.location.origin}/invite?token=${inv.token}`)}
                                   style={{ fontSize: '11px', color: '#B44FFF', background: 'rgba(180,79,255,0.1)', border: '1px solid rgba(180,79,255,0.2)', borderRadius: '6px', padding: '3px 8px', cursor: 'pointer', fontFamily: 'inherit' }}
                                 >
                                   Copiar
