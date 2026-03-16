@@ -119,7 +119,7 @@ function Avatar({ user, size = 40 }: { user: User; size?: number }) {
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       fontSize: size * 0.4, fontWeight: 700, color: 'white',
     }}>
-      {(user.name ?? user.email)[0].toUpperCase()}
+      {(user.name?.trim() || user.email || '?')[0].toUpperCase()}
     </div>
   )
 }
