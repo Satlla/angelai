@@ -11,12 +11,26 @@ const ACTIVITY_OPTIONS = [
   { value: 'atletico', label: 'Atlético', desc: 'Doble sesión' },
 ]
 
+type MeasurementsData = {
+  weight: number | null
+  waist: number | null
+  hips: number | null
+  chest: number | null
+  arms: number | null
+  bicepFlexed: number | null
+  thighs: number | null
+  calves: number | null
+  shoulders: number | null
+}
+
 export default function SettingsClient({
   email, profilePhotoUrl: initialPhotoUrl, defaultName, defaultAge, defaultSex,
   height: initialHeight, activityLevel: initialActivityLevel,
   dietNotes: initialDietNotes,
   weeklyEmailEnabled: initialWeeklyEmail,
   dailyReminderEnabled: initialDailyReminder,
+  measurements: initialMeasurements,
+  hasCheckIn,
 }: {
   email: string
   profilePhotoUrl: string | null
@@ -28,6 +42,8 @@ export default function SettingsClient({
   dietNotes: string
   weeklyEmailEnabled: boolean
   dailyReminderEnabled: boolean
+  measurements: MeasurementsData
+  hasCheckIn: boolean
 }) {
   const [name, setName] = useState(defaultName)
   const [age, setAge] = useState(defaultAge)
@@ -45,6 +61,20 @@ export default function SettingsClient({
   const [lm, setLm] = useState(false)
   const photoInputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
+
+  // Medidas corporales
+  const [mWeight,      setMWeight]      = useState(initialMeasurements.weight      != null ? String(initialMeasurements.weight)      : '')
+  const [mWaist,       setMWaist]       = useState(initialMeasurements.waist       != null ? String(initialMeasurements.waist)       : '')
+  const [mHips,        setMHips]        = useState(initialMeasurements.hips        != null ? String(initialMeasurements.hips)        : '')
+  const [mChest,       setMChest]       = useState(initialMeasurements.chest       != null ? String(initialMeasurements.chest)       : '')
+  const [mArms,        setMArms]        = useState(initialMeasurements.arms        != null ? String(initialMeasurements.arms)        : '')
+  const [mBicepFlexed, setMBicepFlexed] = useState(initialMeasurements.bicepFlexed != null ? String(initialMeasurements.bicepFlexed) : '')
+  const [mThighs,      setMThighs]      = useState(initialMeasurements.thighs      != null ? String(initialMeasurements.thighs)      : '')
+  const [mCalves,      setMCalves]      = useState(initialMeasurements.calves      != null ? String(initialMeasurements.calves)      : '')
+  const [mShoulders,   setMShoulders]   = useState(initialMeasurements.shoulders   != null ? String(initialMeasurements.shoulders)   : '')
+  const [mSaving,      setMSaving]      = useState(false)
+  const [mSaved,       setMSaved]       = useState(false)
+  const [mError,       setMError]       = useState('')
 
   useEffect(() => {
     setLm(localStorage.getItem('angelai_theme') === 'light')
@@ -114,6 +144,39 @@ export default function SettingsClient({
       setError('Error al guardar. Inténtalo de nuevo.')
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function handleSaveMeasurements(e: React.FormEvent) {
+    e.preventDefault()
+    if (!hasCheckIn) return
+    setMSaving(true)
+    setMError('')
+    setMSaved(false)
+    const payload: Record<string, number | null> = {
+      ...(mWeight      ? { weight:      parseFloat(mWeight) }      : {}),
+      waist:       mWaist       ? parseFloat(mWaist)       : null,
+      hips:        mHips        ? parseFloat(mHips)        : null,
+      chest:       mChest       ? parseFloat(mChest)       : null,
+      arms:        mArms        ? parseFloat(mArms)        : null,
+      bicepFlexed: mBicepFlexed ? parseFloat(mBicepFlexed) : null,
+      thighs:      mThighs      ? parseFloat(mThighs)      : null,
+      calves:      mCalves      ? parseFloat(mCalves)      : null,
+      shoulders:   mShoulders   ? parseFloat(mShoulders)   : null,
+    }
+    try {
+      const res = await fetch('/api/measurements', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      if (!res.ok) throw new Error()
+      setMSaved(true)
+      setTimeout(() => setMSaved(false), 3000)
+    } catch {
+      setMError('Error al guardar medidas. Inténtalo de nuevo.')
+    } finally {
+      setMSaving(false)
     }
   }
 
@@ -302,6 +365,97 @@ export default function SettingsClient({
               fontFamily: 'inherit', resize: 'vertical', outline: 'none', lineHeight: 1.5,
             }}
           />
+        </div>
+
+        {/* Medidas corporales */}
+        <div style={{ marginBottom: '32px' }}>
+          <p style={{ fontSize: '12px', color: textFaint, fontWeight: 500, marginBottom: '14px', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+            Medidas corporales
+          </p>
+          {!hasCheckIn ? (
+            <div style={{ background: inputBg, border: `1px solid ${cardBorder}`, borderRadius: '12px', padding: '14px 16px', fontSize: '13px', color: textMuted }}>
+              Completa tu primer check-in para poder editar medidas.
+            </div>
+          ) : (
+            <form onSubmit={handleSaveMeasurements} style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
+              <div style={{ background: cardBg, border: `1px solid ${cardBorder}`, borderRadius: '14px', padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                {/* Peso */}
+                <div>
+                  <label style={{ fontSize: '11px', color: textFaint, fontWeight: 500, display: 'block', marginBottom: '6px' }}>Peso</label>
+                  <div className="input-with-unit" style={{ maxWidth: '140px' }}>
+                    <input type="number" placeholder="70" value={mWeight} onChange={e => setMWeight(e.target.value)}
+                      className="input-field" style={{ fontSize: '16px', background: inputBg, border: `1px solid ${inputBorder}`, color: text }}
+                      min="30" max="300" step="0.1" />
+                    <span className="input-unit" style={{ color: textMuted }}>kg</span>
+                  </div>
+                </div>
+
+                <div style={{ height: '1px', background: cardBorder }} />
+
+                {/* Grid 2 cols */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                  {([
+                    ['Cintura',           mWaist,       setMWaist],
+                    ['Cadera',            mHips,        setMHips],
+                    ['Pecho',             mChest,       setMChest],
+                    ['Muslo',             mThighs,      setMThighs],
+                    ['Gemelo',            mCalves,      setMCalves],
+                    ['Hombros',           mShoulders,   setMShoulders],
+                  ] as [string, string, (v: string) => void][]).map(([label, val, setter]) => (
+                    <div key={label}>
+                      <label style={{ fontSize: '11px', color: textFaint, fontWeight: 500, display: 'block', marginBottom: '6px' }}>{label}</label>
+                      <div className="input-with-unit">
+                        <input type="number" placeholder="—" value={val} onChange={e => setter(e.target.value)}
+                          className="input-field" style={{ fontSize: '15px', background: inputBg, border: `1px solid ${inputBorder}`, color: text }}
+                          min="10" max="250" step="0.5" />
+                        <span className="input-unit" style={{ color: textMuted }}>cm</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div style={{ height: '1px', background: cardBorder }} />
+
+                {/* Bíceps */}
+                <div>
+                  <p style={{ fontSize: '11px', color: textFaint, fontWeight: 500, marginBottom: '10px' }}>Bíceps</p>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                    <div>
+                      <label style={{ fontSize: '11px', color: textFaint, fontWeight: 400, display: 'block', marginBottom: '6px' }}>En reposo</label>
+                      <div className="input-with-unit">
+                        <input type="number" placeholder="—" value={mArms} onChange={e => setMArms(e.target.value)}
+                          className="input-field" style={{ fontSize: '15px', background: inputBg, border: `1px solid ${inputBorder}`, color: text }}
+                          min="10" max="100" step="0.5" />
+                        <span className="input-unit" style={{ color: textMuted }}>cm</span>
+                      </div>
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '11px', color: textFaint, fontWeight: 400, display: 'block', marginBottom: '6px' }}>Haciendo fuerza</label>
+                      <div className="input-with-unit">
+                        <input type="number" placeholder="—" value={mBicepFlexed} onChange={e => setMBicepFlexed(e.target.value)}
+                          className="input-field" style={{ fontSize: '15px', background: inputBg, border: `1px solid ${inputBorder}`, color: text }}
+                          min="10" max="100" step="0.5" />
+                        <span className="input-unit" style={{ color: textMuted }}>cm</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {mError && <p style={{ color: '#FF6B6B', fontSize: '13px', margin: '10px 0 0', textAlign: 'center' }}>{mError}</p>}
+
+              <button type="submit" disabled={mSaving}
+                style={{
+                  marginTop: '12px', width: '100%', padding: '14px', borderRadius: '12px', border: 'none',
+                  background: mSaved ? '#4CAF50' : 'rgba(180,79,255,0.15)',
+                  color: mSaved ? 'white' : '#B44FFF',
+                  fontSize: '14px', fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer',
+                  border: `1px solid ${mSaved ? '#4CAF50' : 'rgba(180,79,255,0.3)'}`,
+                }}>
+                {mSaving ? 'Guardando...' : mSaved ? '¡Medidas guardadas!' : 'Guardar medidas'}
+              </button>
+            </form>
+          )}
         </div>
 
         {/* Notificaciones */}

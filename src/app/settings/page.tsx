@@ -15,7 +15,11 @@ export default async function Settings() {
     prisma.checkIn.findFirst({
       where: { userId: session.userId },
       orderBy: { createdAt: 'desc' },
-      select: { height: true, activityLevel: true },
+      select: {
+        height: true, activityLevel: true,
+        weight: true, waist: true, hips: true, chest: true,
+        arms: true, bicepFlexed: true, thighs: true, calves: true, shoulders: true,
+      },
     }),
     prisma.userPreferences.findUnique({
       where: { userId: session.userId },
@@ -37,6 +41,18 @@ export default async function Settings() {
       dietNotes={prefs?.dietNotes || ''}
       weeklyEmailEnabled={prefs?.weeklyEmailEnabled ?? true}
       dailyReminderEnabled={prefs?.dailyReminderEnabled ?? true}
+      measurements={{
+        weight:      lastCheckIn?.weight ?? null,
+        waist:       lastCheckIn?.waist ?? null,
+        hips:        lastCheckIn?.hips ?? null,
+        chest:       lastCheckIn?.chest ?? null,
+        arms:        lastCheckIn?.arms ?? null,
+        bicepFlexed: lastCheckIn?.bicepFlexed ?? null,
+        thighs:      lastCheckIn?.thighs ?? null,
+        calves:      lastCheckIn?.calves ?? null,
+        shoulders:   lastCheckIn?.shoulders ?? null,
+      }}
+      hasCheckIn={!!lastCheckIn}
     />
   )
 }

@@ -84,6 +84,7 @@ model CheckIn {
   hips              Float?
   chest             Float?
   arms              Float?
+  bicepFlexed       Float?
   goal              String    @default("definicion")
   frontPhotoUrl     String?
   sidePhotoUrl      String?
