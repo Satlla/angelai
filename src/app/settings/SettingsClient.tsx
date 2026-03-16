@@ -446,11 +446,11 @@ export default function SettingsClient({
 
               <button type="submit" disabled={mSaving}
                 style={{
-                  marginTop: '12px', width: '100%', padding: '14px', borderRadius: '12px', border: 'none',
+                  marginTop: '12px', width: '100%', padding: '14px', borderRadius: '12px',
+                  border: `1px solid ${mSaved ? '#4CAF50' : 'rgba(180,79,255,0.3)'}`,
                   background: mSaved ? '#4CAF50' : 'rgba(180,79,255,0.15)',
                   color: mSaved ? 'white' : '#B44FFF',
                   fontSize: '14px', fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer',
-                  border: `1px solid ${mSaved ? '#4CAF50' : 'rgba(180,79,255,0.3)'}`,
                 }}>
                 {mSaving ? 'Guardando...' : mSaved ? '¡Medidas guardadas!' : 'Guardar medidas'}
               </button>
