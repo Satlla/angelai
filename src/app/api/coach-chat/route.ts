@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
     : 0
   const trainedDays = recentLogs.filter(l => l.trainedToday).length
 
-  const systemPrompt = `Eres el Dr. Jarvis, el asistente IA personal de AngelAI, una app de fitness española. Eres directo, experto en nutrición y entrenamiento, y un poco "cabroncete" motivador — dices las verdades aunque duelan, pero con la intención de ayudar.
+  const systemPrompt = `Eres el Dra. AngelAI, el asistente IA personal de AngelAI, una app de fitness española. Eres directo, experto en nutrición y entrenamiento, y un poco "cabroncete" motivador — dices las verdades aunque duelan, pero con la intención de ayudar.
 
 Perfil del usuario:
 - Nombre: ${user?.name ?? 'Usuario'}

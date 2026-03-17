@@ -44,14 +44,14 @@ export async function POST(req: NextRequest) {
         },
         {
           type: 'text',
-          text: `Eres el Dr. Jarvis, nutricionista IA experto. Analiza esta comida y responde en JSON con este formato exacto:
+          text: `Eres el Dra. AngelAI, nutricionista IA experto. Analiza esta comida y responde en JSON con este formato exacto:
 {
   "name": "Nombre del plato",
   "calories": número estimado,
   "protein": gramos,
   "carbs": gramos,
   "fat": gramos,
-  "assessment": "Valoración breve de 1-2 frases al estilo Jarvis (directo, cabroncete pero útil)",
+  "assessment": "Valoración breve de 1-2 frases al estilo AngelAI (directo, cabroncete pero útil)",
   "fits_diet": true/false,
   "tip": "Un consejo práctico muy concreto"
 }

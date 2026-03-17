@@ -44,7 +44,7 @@ export default function FoodAnalyzer() {
         <span style={{ fontSize: '20px' }}>📸</span>
         <div>
           <p style={{ fontSize: '13px', fontWeight: 600, color: 'rgba(255,255,255,0.8)' }}>Analizar foto de comida</p>
-          <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.3)', marginTop: '1px' }}>Saca foto a tu plato y Jarvis lo analiza</p>
+          <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.3)', marginTop: '1px' }}>Saca foto a tu plato y AngelAI lo analiza</p>
         </div>
       </div>
 
@@ -96,7 +96,7 @@ export default function FoodAnalyzer() {
           )}
 
           <div style={{ background: 'rgba(180,79,255,0.06)', border: '1px solid rgba(180,79,255,0.15)', borderRadius: '10px', padding: '12px', marginBottom: '8px' }}>
-            <span style={{ fontSize: '11px', fontWeight: 700, color: '#B44FFF', letterSpacing: '0.5px', display: 'block', marginBottom: '4px' }}>🤖 Dr. Jarvis dice:</span>
+            <span style={{ fontSize: '11px', fontWeight: 700, color: '#B44FFF', letterSpacing: '0.5px', display: 'block', marginBottom: '4px' }}>🤖 Dra. AngelAI dice:</span>
             <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.7)', lineHeight: 1.5 }}>{result.assessment}</p>
           </div>
 

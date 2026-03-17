@@ -233,7 +233,7 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
   }, [lightMode])
 
   useEffect(() => {
-    // Dr. Jarvis greeting — show once per day unless permanently dismissed
+    // Dra. AngelAI greeting — show once per day unless permanently dismissed
     if (!localStorage.getItem('jarvis_no_molestar')) {
       const greetKey = `jarvis_greeted_${new Date().toDateString()}`
       if (!localStorage.getItem(greetKey)) {
@@ -346,7 +346,7 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
 
   function shareJarvisMessage(content: string) {
     const text = content.replace(/\*\*(.*?)\*\*/g, '$1').replace(/\*(.*?)\*/g, '$1').replace(/_\((.*?)\)_/g, '$1')
-    const shareText = `Dr. Jarvis (AngelAI) me dice:\n\n"${text}"\n\n💪 angelai.app`
+    const shareText = `Dra. AngelAI (AngelAI) me dice:\n\n"${text}"\n\n💪 angelai.app`
     if (navigator.share) {
       navigator.share({ text: shareText }).catch(() => {})
     } else {
@@ -2094,7 +2094,7 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
         </div>
       </div>
 
-      {/* ── Dr. Jarvis floating bubble ── */}
+      {/* ── Dra. AngelAI floating bubble ── */}
 
       {/* Greeting speech bubble */}
       {jarvisGreeting && !showJarvis && (
@@ -2109,7 +2109,7 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
               <span style={{ fontSize: '16px' }}>🤖</span>
-              <span style={{ fontSize: '12px', fontWeight: 700, color: '#B44FFF' }}>Dr. Jarvis</span>
+              <span style={{ fontSize: '12px', fontWeight: 700, color: '#B44FFF' }}>Dra. AngelAI</span>
             </div>
             <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.8)', lineHeight: 1.5, marginBottom: '12px' }}>
               Si necesitas cambiar algo de la dieta o tienes alguna duda con tu entreno, háblame 💪
@@ -2149,7 +2149,7 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
             fontSize: '22px',
             animation: jarvisGreeting ? 'pulse 2s infinite' : 'none',
           }}
-          aria-label="Dr. Jarvis"
+          aria-label="Dra. AngelAI"
         >
           🤖
         </button>
@@ -2174,7 +2174,7 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
             <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', gap: '12px' }}>
               <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg, #B44FFF, #7B2FBE)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0 }}>🤖</div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: '15px', fontWeight: 700, color: 'white' }}>Dr. Jarvis</div>
+                <div style={{ fontSize: '15px', fontWeight: 700, color: 'white' }}>Dra. AngelAI</div>
                 <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.35)' }}>Tu asistente de dieta y entreno</div>
               </div>
               <button onClick={() => setShowJarvis(false)} style={{ background: 'rgba(255,255,255,0.06)', border: 'none', borderRadius: '8px', width: '32px', height: '32px', cursor: 'pointer', color: 'rgba(255,255,255,0.5)', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
@@ -2185,7 +2185,7 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
               {coachMessages.length === 0 && (
                 <div style={{ background: 'rgba(180,79,255,0.06)', border: '1px solid rgba(180,79,255,0.15)', borderRadius: '14px 14px 14px 4px', padding: '14px 16px' }}>
                   <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.7)', lineHeight: 1.6, margin: 0 }}>
-                    Hola, soy el Dr. Jarvis. Pregúntame lo que necesites sobre tu dieta o entrenamiento. Sin filtros, te digo la verdad.
+                    Hola, soy el Dra. AngelAI. Pregúntame lo que necesites sobre tu dieta o entrenamiento. Sin filtros, te digo la verdad.
                   </p>
                 </div>
               )}
@@ -2243,7 +2243,7 @@ export default function DashboardClient({ user, checkIns, badges, daysLeft, pref
                 value={coachInput}
                 onChange={e => setCoachInput(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendCoachMessage() } }}
-                placeholder="Pregunta al Dr. Jarvis..."
+                placeholder="Pregunta al Dra. AngelAI..."
                 rows={2}
                 disabled={coachLoading}
                 style={{ flex: 1, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', color: 'white', padding: '10px 14px', fontSize: '14px', fontFamily: 'inherit', resize: 'none', outline: 'none', lineHeight: 1.5 }}

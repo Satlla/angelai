@@ -276,7 +276,7 @@ function UserDetail({ user, onBack }: { user: User; onBack: () => void }) {
           { key: 'overview', label: 'Resumen' },
           { key: 'checkins', label: `Check-ins (${user.checkIns.length})` },
           { key: 'logs', label: `Logs (${user.dailyLogs.length})` },
-          { key: 'chat', label: `Dr. Jarvis 🤖 (${user.coachMessages.length})` },
+          { key: 'chat', label: `Dra. AngelAI 🤖 (${user.coachMessages.length})` },
         ] as const).map(t => (
           <button key={t.key} onClick={() => setTab(t.key)} style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid', borderColor: tab === t.key ? 'rgba(180,79,255,0.5)' : 'rgba(255,255,255,0.1)', background: tab === t.key ? 'rgba(180,79,255,0.15)' : 'transparent', color: tab === t.key ? 'white' : 'rgba(255,255,255,0.4)', fontFamily: 'inherit', fontSize: '13px', fontWeight: 500, cursor: 'pointer' }}>
             {t.label}
@@ -417,13 +417,13 @@ function UserDetail({ user, onBack }: { user: User; onBack: () => void }) {
       {tab === 'chat' && (
         <div style={{ background: '#0C0D16', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '16px', overflow: 'hidden' }}>
           {user.coachMessages.length === 0
-            ? <div style={{ color: 'rgba(255,255,255,0.3)', textAlign: 'center', padding: '40px' }}>Sin conversaciones con Dr. Jarvis</div>
+            ? <div style={{ color: 'rgba(255,255,255,0.3)', textAlign: 'center', padding: '40px' }}>Sin conversaciones con Dra. AngelAI</div>
             : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', padding: '16px', maxHeight: '600px', overflowY: 'auto' }}>
                 {user.coachMessages.map((msg) => (
                   <div key={msg.id} style={{ display: 'flex', flexDirection: 'column', alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start', gap: '2px', marginBottom: '10px' }}>
                     <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.25)', marginBottom: '3px' }}>
-                      {msg.role === 'user' ? '👤 Usuario' : '🤖 Dr. Jarvis'} · {new Date(msg.createdAt).toLocaleString('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                      {msg.role === 'user' ? '👤 Usuario' : '🤖 Dra. AngelAI'} · {new Date(msg.createdAt).toLocaleString('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
                     </div>
                     <div style={{
                       maxWidth: '80%',

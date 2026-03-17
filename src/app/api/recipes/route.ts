@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
     max_tokens: 1200,
     messages: [{
       role: 'user',
-      content: `Eres el Dr. Jarvis, nutricionista experto en cocina española. Genera 3 recetas para ${mealNames[meal] || meal}.
+      content: `Eres el Dra. AngelAI, nutricionista experto en cocina española. Genera 3 recetas para ${mealNames[meal] || meal}.
 
 ${context}
 
@@ -58,7 +58,7 @@ Responde en JSON con este formato exacto:
       "time": "15 min",
       "ingredients": ["200g pollo", "1 limón", ...],
       "steps": ["Paso 1...", "Paso 2...", ...],
-      "tip": "Consejo de Jarvis"
+      "tip": "Consejo de AngelAI"
     }
   ]
 }
