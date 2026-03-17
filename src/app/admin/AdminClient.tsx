@@ -503,6 +503,27 @@ function UserCard({ user, onSelect }: { user: User; onSelect: () => void }) {
   )
 }
 
+// ── Users grid (isolated so Catch can capture any render error) ────────────
+function UsersGrid({ users, search, statusFilter, onSelect }: {
+  users: User[]
+  search: string
+  statusFilter: 'all' | 'active' | 'at-risk' | 'inactive'
+  onSelect: (u: User) => void
+}) {
+  const filtered = users.filter(u => {
+    const matchSearch = (u.email ?? '').toLowerCase().includes(search.toLowerCase()) ||
+      (u.name ?? '').toLowerCase().includes(search.toLowerCase())
+    const matchStatus = statusFilter === 'all' || getUserStatus(u) === statusFilter
+    return matchSearch && matchStatus
+  })
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '10px' }}>
+      {filtered.map(u => <UserCard key={u.id} user={u} onSelect={() => onSelect(u)} />)}
+      {filtered.length === 0 && <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '60px', color: 'rgba(255,255,255,0.25)' }}>No se encontraron usuarios</div>}
+    </div>
+  )
+}
+
 // ── Main component ─────────────────────────────────────────────────────────
 export default function AdminClient({ users, analytics, recentEvents, invites }: {
   users: User[]; analytics: AnalyticsStat[]; recentEvents: RecentEvent[]; invites: Invite[]
@@ -556,13 +577,6 @@ export default function AdminClient({ users, analytics, recentEvents, invites }:
       label: d.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' }),
       value: users.filter(u => { const t = new Date(u.createdAt).getTime(); return t >= d.getTime() && t < next.getTime() }).length,
     }
-  })
-
-  // ── Filtered users ──
-  const filtered = users.filter(u => {
-    const matchSearch = u.email.toLowerCase().includes(search.toLowerCase()) || (u.name ?? '').toLowerCase().includes(search.toLowerCase())
-    const matchStatus = statusFilter === 'all' || getUserStatus(u) === statusFilter
-    return matchSearch && matchStatus
   })
 
   // ── User lookup map for events ──
@@ -713,10 +727,7 @@ export default function AdminClient({ users, analytics, recentEvents, invites }:
               ))}
             </div>
             <Catch>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '10px' }}>
-                {filtered.map(u => <UserCard key={u.id} user={u} onSelect={() => setSelectedUser(u)} />)}
-                {filtered.length === 0 && <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '60px', color: 'rgba(255,255,255,0.25)' }}>No se encontraron usuarios</div>}
-              </div>
+              <UsersGrid users={users} search={search} statusFilter={statusFilter} onSelect={setSelectedUser} />
             </Catch>
           </div>
         )}
