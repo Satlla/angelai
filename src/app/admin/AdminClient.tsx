@@ -1,5 +1,21 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Component, type ReactNode } from 'react'
+
+// ── Inline error boundary ───────────────────────────────────────────────────
+class Catch extends Component<{ children: ReactNode }, { err: Error | null }> {
+  state: { err: Error | null } = { err: null }
+  static getDerivedStateFromError(err: Error) { return { err } }
+  render() {
+    if (this.state.err) return (
+      <div style={{ padding: 24, background: 'rgba(255,50,50,0.08)', border: '1px solid rgba(255,50,50,0.3)', borderRadius: 12, fontFamily: 'monospace', color: '#FF6B6B', fontSize: 13 }}>
+        <strong>Error en Usuarios:</strong> {this.state.err.message}
+        <pre style={{ marginTop: 8, fontSize: 11, color: 'rgba(255,255,255,0.4)', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>{this.state.err.stack}</pre>
+        <button onClick={() => this.setState({ err: null })} style={{ marginTop: 12, padding: '6px 14px', background: 'rgba(255,50,50,0.15)', border: '1px solid rgba(255,50,50,0.3)', borderRadius: 8, color: '#FF6B6B', cursor: 'pointer', fontFamily: 'monospace' }}>Reintentar</button>
+      </div>
+    )
+    return this.props.children
+  }
+}
 
 // ── Event labels ───────────────────────────────────────────────────────────
 const EVENT_META: Record<string, { label: string; icon: string; color: string }> = {
@@ -696,10 +712,12 @@ export default function AdminClient({ users, analytics, recentEvents, invites }:
                 </button>
               ))}
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '10px' }}>
-              {filtered.map(u => <UserCard key={u.id} user={u} onSelect={() => setSelectedUser(u)} />)}
-              {filtered.length === 0 && <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '60px', color: 'rgba(255,255,255,0.25)' }}>No se encontraron usuarios</div>}
-            </div>
+            <Catch>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '10px' }}>
+                {filtered.map(u => <UserCard key={u.id} user={u} onSelect={() => setSelectedUser(u)} />)}
+                {filtered.length === 0 && <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '60px', color: 'rgba(255,255,255,0.25)' }}>No se encontraron usuarios</div>}
+              </div>
+            </Catch>
           </div>
         )}
 
