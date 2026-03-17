@@ -1,7 +1,9 @@
 import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
 import { prisma } from '@/lib/prisma'
-import AdminClient from './AdminClient'
+import dynamic from 'next/dynamic'
+
+const AdminClient = dynamic(() => import('./AdminClient'), { ssr: false })
 
 export default async function AdminPage() {
   const cookieStore = await cookies()
