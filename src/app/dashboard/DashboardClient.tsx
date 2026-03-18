@@ -74,7 +74,7 @@ function weeksToSummer(): number {
 }
 
 function daysSinceLastLog(logs: DailyLogEntry[]): number {
-  if (!logs.length) return 999
+  if (!logs.length) return 0
   const sorted = [...logs].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
   const last = new Date(sorted[0].date); last.setHours(0, 0, 0, 0)
   const today = new Date(); today.setHours(0, 0, 0, 0)
